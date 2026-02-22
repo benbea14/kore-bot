@@ -35,6 +35,8 @@ app.listen(PORT, () => console.log(`🌱 Keep-alive server listening on port ${P
 
 client.commands = new Collection();
 
+// ================= COMMAND HANDLER =================
+
 const foldersPath = path.join(__dirname, 'commands');
 const commandFolders = fs.readdirSync(foldersPath);
 
@@ -51,25 +53,45 @@ for (const folder of commandFolders) {
   }
 }
 
+// ================= READY =================
+
 client.once(Events.ClientReady, async () => {
   console.log(`✅ Logged in as ${client.user.tag}`);
 });
 
+// ================= INTERACTIONS =================
+
 client.on(Events.InteractionCreate, async interaction => {
 
-  // Slash commands
+  // ===== SLASH COMMANDS =====
   if (interaction.isChatInputCommand()) {
     const command = client.commands.get(interaction.commandName);
     if (!command) return;
 
     try {
       await command.execute(interaction);
-    } 
+    } catch (error) {
+      console.error(error);
 
-  // Accept Rules
+      if (interaction.replied || interaction.deferred) {
+        await interaction.followUp({
+          content: '⚠️ An error occurred while executing this command.',
+          flags: 64
+        });
+      } else {
+        await interaction.reply({
+          content: '⚠️ An error occurred while executing this command.',
+          flags: 64
+        });
+      }
+    }
+  }
+
+  // ===== BUTTONS =====
   if (interaction.isButton()) {
     const customId = interaction.customId;
 
+    // Accept Rules Button
     if (customId === 'accept_rules') {
       const role = interaction.guild.roles.cache.find(r => r.name === 'ARMY');
 
@@ -88,7 +110,7 @@ client.on(Events.InteractionCreate, async interaction => {
       });
     }
 
-    // Bias Roles
+    // Bias Role Buttons
     const biasRoles = {
       role_rm: '🐨 RM',
       role_jin: '🐹 Jin',
@@ -120,27 +142,24 @@ client.on(Events.InteractionCreate, async interaction => {
   }
 });
 
-// Welcome message
+// ================= WELCOME MESSAGE =================
+
 client.on(Events.GuildMemberAdd, async member => {
   const channel = member.guild.channels.cache.get(WELCOME_CHANNEL_ID);
   if (!channel) return;
 
-  // Attachment vorbereiten
   const attachment = new AttachmentBuilder(path.join(__dirname, 'welcome.png'));
 
-  // Embed erstellen
   const welcomeEmbed = new EmbedBuilder()
     .setColor(0x9B59B6)
     .setTitle(`🎉 Welcome to ${member.guild.name}!`)
     .setDescription(`Hello <@${member.id}>!`)
-    .setImage('attachment://welcome.png') // <-- wichtig, zwei Punkte : und exakt "attachment://Dateiname"
+    .setImage('attachment://welcome.png')
     .setFooter({ text: 'Please read the rules 💜' })
     .setTimestamp();
 
-  // Nachricht senden
   await channel.send({ embeds: [welcomeEmbed], files: [attachment] });
 
-  // DM senden (optional)
   try {
     await member.send({ embeds: [welcomeEmbed], files: [attachment] });
   } catch {
@@ -148,10 +167,12 @@ client.on(Events.GuildMemberAdd, async member => {
   }
 });
 
+// ================= MESSAGE EVENTS =================
+
 client.on('messageCreate', async (message) => {
   if (message.author.bot) return;
 
-  // XP SYSTEM
+  // ===== XP SYSTEM =====
   const result = await handleMessage(message);
 
   if (result && result.leveledUp) {
@@ -185,7 +206,7 @@ client.on('messageCreate', async (message) => {
     } catch {}
   }
 
-  // COUNTING GAME
+  // ===== COUNTING GAME =====
   await countingGame(message);
 });
 
