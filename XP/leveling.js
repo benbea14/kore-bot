@@ -44,7 +44,7 @@ async function updateNickname(member, level) {
   if (!member.manageable) return;
 
   const levelInfo = getLevelData(level);
-  const baseName = member.user.username;
+  const baseName = message.member.displayName;
 
   const newNick = `${baseName} ${levelInfo.emoji}`;
 
@@ -164,3 +164,4 @@ module.exports = {
   addXP
 
 };
+
