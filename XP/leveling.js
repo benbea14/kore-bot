@@ -158,9 +158,9 @@ module.exports = {
   handleMessage,
   getUser,
   setLevel,
-  setTitle,
   setCustomTitle,
   getLevelData,
   updateNickname,
   addXP
+
 };
