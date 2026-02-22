@@ -2,7 +2,7 @@ const fs = require('fs');
 const path = require('path');
 
 const dataPath = path.join(__dirname, 'data.json');
-const db = require('./database');
+let xpData = {};
 
 if (fs.existsSync(dataPath)) {
   xpData = JSON.parse(fs.readFileSync(dataPath, 'utf8'));
@@ -105,6 +105,13 @@ async function handleMessage(message) {
   return null;
 }
 
+function getUser(userId) {
+  if (!xpData[userId]) {
+    return { xp: 0, level: 1, customTitle: null };
+  }
+  return xpData[userId];
+}
+
 function setLevel(userId, level) {
   if (!xpData[userId]) {
     xpData[userId] = { xp: 0, level: 1, customTitle: null };
@@ -167,5 +174,6 @@ module.exports = {
   updateNickname,
   addXP
 };
+
 
 
