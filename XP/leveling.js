@@ -2,7 +2,7 @@ const fs = require('fs');
 const path = require('path');
 
 const dataPath = path.join(__dirname, 'data.json');
-let xpData = {};
+const db = require('./database');
 
 if (fs.existsSync(dataPath)) {
   xpData = JSON.parse(fs.readFileSync(dataPath, 'utf8'));
@@ -174,3 +174,4 @@ module.exports = {
   updateNickname,
   addXP
 };
+
