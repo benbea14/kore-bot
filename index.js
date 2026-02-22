@@ -64,14 +64,7 @@ client.on(Events.InteractionCreate, async interaction => {
 
     try {
       await command.execute(interaction);
-    } catch (error) {
-      console.error(error);
-      await interaction.reply({
-        content: '⚠️ An error occurred while executing this command.',
-        ephemeral: true,
-      });
-    }
-  }
+    } 
 
   // Accept Rules
   if (interaction.isButton()) {
@@ -83,7 +76,7 @@ client.on(Events.InteractionCreate, async interaction => {
       if (!role) {
         return interaction.reply({
           content: '⚠️ The "ARMY" role was not found.',
-          ephemeral: true,
+          flags: 64
         });
       }
 
@@ -91,7 +84,7 @@ client.on(Events.InteractionCreate, async interaction => {
 
       return interaction.reply({
         content: '✅ You received the ARMY role.',
-        ephemeral: true,
+        flags: 64
       });
     }
 
@@ -113,7 +106,7 @@ client.on(Events.InteractionCreate, async interaction => {
       if (!role) {
         return interaction.reply({
           content: `⚠️ Role "${roleName}" not found.`,
-          ephemeral: true,
+          flags: 64
         });
       }
 
@@ -121,7 +114,7 @@ client.on(Events.InteractionCreate, async interaction => {
 
       return interaction.reply({
         content: `💜 You now have ${roleName}!`,
-        ephemeral: true,
+        flags: 64
       });
     }
   }
@@ -197,4 +190,3 @@ client.on('messageCreate', async (message) => {
 });
 
 client.login(token);
-
