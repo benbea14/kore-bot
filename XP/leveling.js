@@ -105,13 +105,6 @@ async function handleMessage(message) {
   return null;
 }
 
-function getUser(userId) {
-  if (!xpData[userId]) {
-    return { xp: 0, level: 1, customTitle: null };
-  }
-  return xpData[userId];
-}
-
 function setLevel(userId, level) {
   if (!xpData[userId]) {
     xpData[userId] = { xp: 0, level: 1, customTitle: null };
@@ -174,4 +167,5 @@ module.exports = {
   updateNickname,
   addXP
 };
+
 
