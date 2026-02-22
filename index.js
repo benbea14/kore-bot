@@ -154,24 +154,19 @@ client.on(Events.GuildMemberAdd, async member => {
   }
 });
 
-// leveling System
-const { handleMessage, updateNickname, getLevelData } = require('./XP/leveling');
-
 client.on('messageCreate', async (message) => {
   if (message.author.bot) return;
 
+  // XP SYSTEM
   const result = await handleMessage(message);
-  if (!result) return;
 
-  if (result.leveledUp) {
+  if (result && result.leveledUp) {
     const levelInfo = getLevelData(result.level);
 
-    // Fortschrittsbalken
-    const nextLevelXP = result.level * 100; // passt zu deinem LEVEL_MULTIPLIER
+    const nextLevelXP = result.level * 100;
     const progress = Math.min(Math.round((result.xp / nextLevelXP) * 10), 10);
     const progressBar = '▰'.repeat(progress) + '▱'.repeat(10 - progress);
 
-    // Fancy Level-Up Embed
     const embed = new EmbedBuilder()
       .setColor(0x9B59B6)
       .setTitle('🎉 LEVEL UP! 🎉')
@@ -185,24 +180,19 @@ client.on('messageCreate', async (message) => {
       .setFooter({ text: 'Auto XP System • Chat to grow' })
       .setTimestamp();
 
-    // Nachricht im Channel
-    message.channel.send({ embeds: [embed] });
+    await message.channel.send({ embeds: [embed] });
 
-    // Automatischer Nickname Update
     if (message.member) {
       await updateNickname(message.member, result.level);
     }
 
-    // DM optional
     try {
       await message.author.send({ embeds: [embed] });
     } catch {}
   }
 
+  // COUNTING GAME
   await countingGame(message);
 });
-
-
-
 
 client.login(token);
