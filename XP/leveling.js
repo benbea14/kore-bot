@@ -26,8 +26,8 @@ function getRandomXP() {
 const TITLES = [
   { level: 1, title: "Borahae Newbie", emoji: "🌱" },
   { level: 5, title: "Rising ARMY Star", emoji: "✨" },
-  { level: 10, title: "Bangtan supporter ", emoji: "🎤" },
-  { level: 20, title: "Purple blood elite", emoji: "💜" },
+  { level: 10, title: "Bangtan Supporter", emoji: "🎤" },
+  { level: 20, title: "Purple Blood Elite", emoji: "💜" },
   { level: 30, title: "ARMY Veteran", emoji: "🔥" },
   { level: 40, title: "Bangtan Legend", emoji: "👑" },
 ];
@@ -41,17 +41,19 @@ function getLevelData(level) {
 }
 
 async function updateNickname(member, level) {
-  if (!member.manageable) return;
+  if (!member || !member.manageable) return;
 
   const levelInfo = getLevelData(level);
-  const baseName = message.member.displayName;
 
-  const newNick = `${baseName} ${levelInfo.emoji}`;
+  // Entfernt alte Emojis am Ende
+  const baseName = member.displayName.split(' | ')[0];
+
+  const newNick = `${baseName} | ${levelInfo.emoji}`;
 
   try {
     await member.setNickname(newNick);
   } catch (error) {
-    console.log(`Couldn't set nickname for ${member.user.tag}: ${error}`);
+    console.log('Could not update nickname:', error.message);
   }
 }
 
@@ -67,7 +69,7 @@ async function handleMessage(message) {
   cooldowns.set(userId, now);
 
   if (!xpData[userId]) {
-    xpData[userId] = { xp: 0, level: 1, title: null };
+    xpData[userId] = { xp: 0, level: 1, customTitle: null };
   }
 
   const gainedXP = getRandomXP();
@@ -86,16 +88,17 @@ async function handleMessage(message) {
   saveData();
 
   if (leveledUp) {
-    const levelInfo = getLevelData(currentLevel);
-
     await updateNickname(message.member, currentLevel);
+
+    const levelInfo = getLevelData(currentLevel);
 
     return {
       userId,
       level: currentLevel,
+      xp: xpData[userId].xp,
+      leveledUp: true,
       emoji: levelInfo.emoji,
-      title: xpData[userId].title || levelInfo.title,
-      leveledUp: true
+      title: xpData[userId].customTitle || levelInfo.title
     };
   }
 
@@ -103,28 +106,35 @@ async function handleMessage(message) {
 }
 
 function getUser(userId) {
-  if (!xpData[userId]) return { xp: 0, level: 1, title: null, customTitle: null };
+  if (!xpData[userId]) {
+    return { xp: 0, level: 1, customTitle: null };
+  }
   return xpData[userId];
 }
 
 function setLevel(userId, level) {
-  if (!xpData[userId]) xpData[userId] = { xp: 0, level: 1, title: null };
+  if (!xpData[userId]) {
+    xpData[userId] = { xp: 0, level: 1, customTitle: null };
+  }
 
   xpData[userId].level = level;
   xpData[userId].xp = 0;
+
   saveData();
 }
 
 function setCustomTitle(userId, customTitle) {
-  if (!xpData[userId]) xpData[userId] = { xp: 0, level: 1, title: null, customTitle: null };
+  if (!xpData[userId]) {
+    xpData[userId] = { xp: 0, level: 1, customTitle: null };
+  }
+
   xpData[userId].customTitle = customTitle;
   saveData();
 }
 
 async function addXP(userId, amount, member = null) {
-
   if (!xpData[userId]) {
-    xpData[userId] = { xp: 0, level: 1, title: null };
+    xpData[userId] = { xp: 0, level: 1, customTitle: null };
   }
 
   xpData[userId].xp += amount;
@@ -149,8 +159,9 @@ async function addXP(userId, amount, member = null) {
 
   return {
     level: currentLevel,
+    xp: xpData[userId].xp,
     leveledUp,
-    title: xpData[userId].title || levelInfo.title
+    title: xpData[userId].customTitle || levelInfo.title
   };
 }
 
@@ -162,6 +173,4 @@ module.exports = {
   getLevelData,
   updateNickname,
   addXP
-
 };
-
