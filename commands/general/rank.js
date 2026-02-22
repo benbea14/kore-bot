@@ -7,10 +7,9 @@ module.exports = {
     .setDescription('Check your level'),
 
   async execute(interaction) {
-    try {
-      // Userdaten abrufen (async, falls getUser async ist)
-      const data = await getUser(interaction.user.id);
-      const levelInfo = getLevelData(data.level);
+    const user = interaction.user;
+    const data = getUser(user.id);
+    const levelInfo = getLevelData(data.level);
 
       // Embed bauen
       const embed = new EmbedBuilder()
@@ -43,3 +42,4 @@ module.exports = {
     }
   }
 };
+
