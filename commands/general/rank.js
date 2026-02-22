@@ -7,9 +7,10 @@ module.exports = {
     .setDescription('Check your level'),
 
   async execute(interaction) {
-    const user = interaction.user;
-    const data = getUser(user.id);
-    const levelInfo = getLevelData(data.level);
+    try {
+      const user = interaction.user;
+      const data = getUser(user.id); // holt Level/Xp aus data.json
+      const levelInfo = getLevelData(data.level);
 
       // Embed bauen
       const embed = new EmbedBuilder()
@@ -29,17 +30,16 @@ module.exports = {
 
       // Reply senden
       await interaction.reply({ embeds: [embed], flags: 64 });
-      
     } catch (error) {
       console.error('Error in /rank:', error);
+
       // Fehler Reply
       if (!interaction.replied) {
         await interaction.reply({
           content: '⚠️ Something went wrong while fetching your rank.',
-          flags: 64;
+          flags: 64
         });
       }
     }
   }
 };
-
