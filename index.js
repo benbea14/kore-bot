@@ -75,12 +75,12 @@ client.on(Events.InteractionCreate, async interaction => {
 
       if (interaction.replied || interaction.deferred) {
         await interaction.followUp({
-          content: '⚠️ An error occurred while executing this command.',
+          content: '⚠️ Command failed, contact technical admin',
           flags: 64
         });
       } else {
         await interaction.reply({
-          content: '⚠️ An error occurred while executing this command.',
+          content: '⚠️ Command failed, contact technical admin',
           flags: 64
         });
       }
@@ -211,3 +211,4 @@ client.on('messageCreate', async (message) => {
 });
 
 client.login(token);
+
