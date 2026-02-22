@@ -3,6 +3,7 @@ const app = express();
 const fs = require('node:fs');
 const path = require('node:path');
 const countingGame = require('./game/CountingGame');
+const { handleMessage, updateNickname, getLevelData } = require('./XP/leveling');
 
 const {
   Client,
@@ -196,3 +197,4 @@ client.on('messageCreate', async (message) => {
 });
 
 client.login(token);
+
