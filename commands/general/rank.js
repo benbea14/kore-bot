@@ -1,7 +1,7 @@
 const { SlashCommandBuilder, EmbedBuilder } = require('discord.js');
 const { getUser, getLevelData } = require('../../XP/leveling');
 
-const LEVEL_MULTIPLIER = 75;
+const LEVEL_MULTIPLIER = 100;
 
 module.exports = {
   data: new SlashCommandBuilder()
