@@ -9,7 +9,6 @@ module.exports = {
 
   async execute(interaction) {
 
-    // ⚠️ WICHTIG: Deine Discord User ID in env
     if (interaction.user.id !== process.env.USER_ID) {
       return interaction.reply({ 
         content: 'Nur für den Bot Owner.', 
@@ -18,17 +17,16 @@ module.exports = {
     }
 
     try {
-      const dataPath = path.join(__dirname, '..', 'data', 'xp.json');
-      // Falls dein Pfad anders ist, hier anpassen!
+      const dataPath = path.join(__dirname, 'data.json');
 
-      if (!fs.existsSync(filePath)) {
+      if (!fs.existsSync(dataPath)) {
         return interaction.reply({ 
           content: 'Datei nicht gefunden.', 
           flags: 64 
         });
       }
 
-      const attachment = new AttachmentBuilder(filePath);
+      const attachment = new AttachmentBuilder(dataPath);
 
       await interaction.reply({
         content: 'Hier ist dein XP Backup:',
