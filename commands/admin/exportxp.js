@@ -9,8 +9,8 @@ module.exports = {
 
   async execute(interaction) {
 
-    // ⚠️ WICHTIG: Deine Discord User ID eintragen
-    if (interaction.user.id !== '469933093537447980') {
+    // ⚠️ WICHTIG: Deine Discord User ID in env
+    if (interaction.user.id !== process.env.USER_ID) {
       return interaction.reply({ 
         content: 'Nur für den Bot Owner.', 
         flags: 64 
