@@ -4,7 +4,7 @@
   "main": "index.js",
   "scripts": {
     "deploy": "node deploy-commands.js"
-  }
+  },
   "keywords": [],
   "author": "",
   "license": "ISC",
