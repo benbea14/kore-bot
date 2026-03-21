@@ -18,7 +18,7 @@ module.exports = {
     }
 
     try {
-      const filePath = path.join(__dirname, '..', '..', 'XP', 'data.json');
+      const dataPath = path.join(__dirname, '..', 'data', 'xp.json');
       // Falls dein Pfad anders ist, hier anpassen!
 
       if (!fs.existsSync(filePath)) {
