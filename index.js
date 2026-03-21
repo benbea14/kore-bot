@@ -203,7 +203,7 @@ client.on(Events.GuildMemberAdd, async member => {
 client.on('messageCreate', async (message) => {
   if (message.author.bot) return;
 
-  const LEVEL_MULTIPLIER = 75; // optional später exportieren
+  const LEVEL_MULTIPLIER = 100; // optional später exportieren
 
   // ===== XP SYSTEM =====
   const result = await handleMessage(message);
