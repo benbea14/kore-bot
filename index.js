@@ -4,6 +4,9 @@ const fs = require('node:fs');
 const path = require('node:path');
 const countingGame = require('./game/CountingGame');
 const { handleMessage, updateNickname, getLevelData } = require('./XP/leveling');
+const { startScheduler } = require('./bday/bdayScheduler');
+const { startDailyScheduler } = require('./daily/dailyScheduler');
+const { handleMessageTrigger } = require('./triggers/triggerHandler');
 
 const {
   Client,
@@ -57,6 +60,9 @@ for (const folder of commandFolders) {
 
 client.once(Events.ClientReady, async () => {
   console.log(`✅ Logged in as ${client.user.tag}`);
+
+  startScheduler(client);
+  startDailyScheduler(client);
 });
 
 // ================= INTERACTIONS =================
@@ -98,7 +104,7 @@ client.on(Events.InteractionCreate, async interaction => {
       if (!role) {
         return interaction.reply({
           content: '⚠️ The "ARMY" role was not found.',
-          flags: 64
+          flags: 64,
         });
       }
 
@@ -106,11 +112,11 @@ client.on(Events.InteractionCreate, async interaction => {
 
       return interaction.reply({
         content: '✅ You received the ARMY role.',
-        flags: 64
+        flags: 64,
       });
     }
 
-    // Bias Role Buttons
+    // Bias Roles
     const biasRoles = {
       role_rm: '🐨 RM',
       role_jin: '🐹 Jin',
@@ -128,7 +134,7 @@ client.on(Events.InteractionCreate, async interaction => {
       if (!role) {
         return interaction.reply({
           content: `⚠️ Role "${roleName}" not found.`,
-          flags: 64
+          flags: 64,
         });
       }
 
@@ -136,7 +142,7 @@ client.on(Events.InteractionCreate, async interaction => {
 
       return interaction.reply({
         content: `💜 You now have ${roleName}!`,
-        flags: 64
+        flags: 64,
       });
     }
   }
@@ -148,20 +154,45 @@ client.on(Events.GuildMemberAdd, async member => {
   const channel = member.guild.channels.cache.get(WELCOME_CHANNEL_ID);
   if (!channel) return;
 
-  const attachment = new AttachmentBuilder(path.join(__dirname, 'welcome.png'));
+  const welcomeImage = path.join(__dirname, 'welcome.png');
+  const RULES_CHANNEL_ID = process.env.RULES_CHANNEL_ID;
 
   const welcomeEmbed = new EmbedBuilder()
     .setColor(0x9B59B6)
     .setTitle(`🎉 Welcome to ${member.guild.name}!`)
-    .setDescription(`Hello <@${member.id}>!`)
+    .setDescription(
+      `Hey ${member}! Welcome to our server! 💜\n
+      Make sure to agree to our <#${RULES_CHANNEL_ID}> to get the ARMY role!\n
+      With that you can join the VC and write in all the chats!`
+    )
     .setImage('attachment://welcome.png')
-    .setFooter({ text: 'Please read the rules 💜' })
+    .setFooter({ text: 'Enjoy your stay 💜' })
     .setTimestamp();
 
-  await channel.send({ embeds: [welcomeEmbed], files: [attachment] });
+  await channel.send({
+    embeds: [welcomeEmbed],
+    files: [new AttachmentBuilder(welcomeImage)]
+  });
+
+      // ===== PRIVATE MESSAGE =====
+  const dmEmbed = new EmbedBuilder()
+    .setColor(0x9B59B6)
+    .setTitle(`💜 Welcome to ${member.guild.name}!`)
+    .setDescription(
+      `Hi ${member}! 🫶\n
+      We’re really happy you joined our BTS community!\n
+      To start chatting:\n
+      1️⃣ Read the rules \n
+      2️⃣ Click the **I agree** button \n
+      3️⃣ Get the **ARMY role**! \n
+      Then you can access all chats and join voice channels!\n Borahae 💜`)
+    .setImage('attachment://welcome.png')
+    .setFooter({ text: 'Have fun and enjoy the server!' });
 
   try {
-    await member.send({ embeds: [welcomeEmbed], files: [attachment] });
+    await member.send({
+      embeds: [dmEmbed],
+      files: [new AttachmentBuilder(welcomeImage)] });
   } catch {
     console.log(`Could not DM ${member.user.tag}`);
   }
@@ -172,43 +203,104 @@ client.on(Events.GuildMemberAdd, async member => {
 client.on('messageCreate', async (message) => {
   if (message.author.bot) return;
 
+  const LEVEL_MULTIPLIER = 100; // optional später exportieren
+
   // ===== XP SYSTEM =====
   const result = await handleMessage(message);
 
   if (result && result.leveledUp) {
-    const levelInfo = getLevelData(result.level);
+    const levelInfo = getLevelData(result.level, result.prestige);
 
-    const nextLevelXP = result.level * 100;
-    const progress = Math.min(Math.round((result.xp / nextLevelXP) * 10), 10);
-    const progressBar = '▰'.repeat(progress) + '▱'.repeat(10 - progress);
+    const nextLevelXP = result.level * LEVEL_MULTIPLIER;
+    const xpNeeded = nextLevelXP - result.xp;
+
+    // 💜 gleiche Progress-Logik wie bei /rank
+    const totalBars = 20;
+    const progressRatio = Math.min(result.xp / nextLevelXP, 1);
+    const filledBars = Math.floor(progressRatio * totalBars);
+    const emptyBars = totalBars - filledBars;
+    const progressBar = '▰'.repeat(filledBars) + '▱'.repeat(emptyBars);
+
+    const displayName =
+      message.member?.nickname || message.author.username;
+
+    const fields = [
+      { name: 'Level', value: `Lv **${result.level}**`, inline: true },
+      { name: 'Title', value: `${levelInfo.emoji} **${levelInfo.title}**`, inline: true },
+    ];
+
+    // Custom Title als Zusatz
+    if (result.title && result.title !== levelInfo.title) {
+      fields.push({
+        name: 'Special',
+        value: `**${result.title}**`,
+        inline: true
+      });
+    }
+
+    fields.push(
+      {
+        name: 'Progress',
+        value: `${result.xp}/${nextLevelXP} XP (${xpNeeded} XP until next level)\n${progressBar}`,
+        inline: false
+      },
+      {
+        name: '\u200b',
+        value: '✨ Keep chatting to reach the next level! 💜',
+        inline: false
+      }
+    );
 
     const embed = new EmbedBuilder()
       .setColor(0x9B59B6)
-      .setTitle('🎉 LEVEL UP! 🎉')
-      .setDescription(`GG <@${result.userId}>! You leveled up! 💜`)
-      .addFields(
-        { name: 'Level', value: `Lv **${result.level}**`, inline: true },
-        { name: 'Title', value: `${levelInfo.emoji} **${levelInfo.title}**`, inline: true },
-        { name: 'Progress', value: `${progressBar} ${result.xp}/${nextLevelXP} XP`, inline: false },
-        { name: '\u200b', value: '🎉✨ Keep chatting to reach the next level! 💜', inline: false }
-      )
-      .setFooter({ text: 'Auto XP System • Chat to grow' })
+      .setTitle(`🎉${displayName} reached Level ${result.level}🎉!`)
+      .setDescription(`Congrats!! You leveled up! 💜`)
+      .addFields(fields)
+      .setFooter({ text: 'Auto XP System' })
       .setTimestamp();
 
     await message.channel.send({ embeds: [embed] });
 
+    if (result.prestigeUp) {
+      const bigStars = Math.floor(result.prestige / 5);
+      const smallStars = result.prestige % 5;
+
+      const stars = "✪".repeat(bigStars) + "✦".repeat(smallStars);
+
+      const prestigeEmbed = new EmbedBuilder()
+        .setColor(0x9B59B6)
+        .setTitle(`🌌 PRESTIGE UNLOCKED`)
+        .setDescription(`💜 **${displayName}** reached Prestige ${stars}!`)
+        .setFooter({ text: 'The journey begins again… stronger than ever.' });
+
+      await message.channel.send({ embeds: [prestigeEmbed] });
+    }
+
+    // Nickname Update (eigentlich macht das schon handleMessage, aber safe ist safe)
     if (message.member) {
       await updateNickname(message.member, result.level);
     }
 
+    // Optional DM
     try {
       await message.author.send({ embeds: [embed] });
     } catch {}
   }
 
   // ===== COUNTING GAME =====
-  await countingGame(message);
+  try {
+    await countingGame(message);
+  } catch (err) {
+    console.error("CountingGame Error:", err);
+  }
+
+  // ===== TRIGGER SYSTEM =====
+  try {
+    await handleMessageTrigger(client, message);
+  } catch (err) {
+    console.error("Trigger Error:", err);
+  }
+
 });
 
 client.login(token);
-
