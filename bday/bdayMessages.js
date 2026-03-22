@@ -17,13 +17,13 @@ function getRandomImage(images) {
 }
 
 // SEND BIRTHDAY
-async function sendBirthdayMessage(client, entry) {
+async function sendBirthdayMessage(client, entry, previewChannel = null) {
 
     const data = bdayService.loadData();
-    const channelId = data.settings?.reminderChannelId;
-    if (!channelId) return;
+    const channelId = process.env.BDAY_CHANNEL_ID;
+    if (!channelId && !previewChannel) return;
 
-    const channel = client.channels.cache.get(channelId);
+    const channel = previewChannel || client.channels.cache.get(channelId);
     if (!channel) return;
 
     const template = data.messages?.birthday?.template;
@@ -69,13 +69,13 @@ async function sendBirthdayMessage(client, entry) {
 }
 
 // SEND EVENT
-async function sendEventMessage(client, event) {
+async function sendEventMessage(client, event, previewChannel = null) {
 
     const data = bdayService.loadData();
-    const channelId = data.settings?.reminderChannelId;
-    if (!channelId) return;
+    const channelId = process.env.BDAY_CHANNEL_ID;
+    if (!channelId && !previewChannel) return;
 
-    const channel = client.channels.cache.get(channelId);
+    const channel = previewChannel || client.channels.cache.get(channelId);
     if (!channel) return;
 
     const template = data.messages?.event?.template;

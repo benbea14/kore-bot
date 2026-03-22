@@ -57,7 +57,7 @@ function startScheduler(client) {
             // SERVER ANNIVERSARY
             if (data.server && data.server.day === todayDay && data.server.month === todayMonth) {
                 try {
-                    const channel = client.channels.cache.get(data.settings?.reminderChannelId);
+                    const channel = client.channels.cache.get(process.env.BDAY_CHANNEL_ID);
                     if (channel) {
                         await channel.send(`🎉 Happy Server Anniversary! 💜`);
                     }

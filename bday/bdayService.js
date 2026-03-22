@@ -3,7 +3,7 @@ const crypto = require('crypto');
 
 const dataPath = '/data/bday.json';
 
-// 📁 Datei erstellen, falls sie nicht existiert
+// Datei erstellen, falls sie nicht existiert
 if (!fs.existsSync(dataPath)) {
     const initialData = {
         meta: { version: 1 },

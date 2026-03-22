@@ -114,10 +114,13 @@ module.exports = {
                     await sendBirthdayMessage(
                         interaction.client,
                         dummy,
-                        interaction.channel,
-                        true
+                        interaction.channel
                     );
 
+                    return interaction.reply({
+                        content: `✅ Birthday preview sent`,
+                        flags: 64
+                    });
                 }
 
                 else if (type === 'event') {
@@ -125,9 +128,13 @@ module.exports = {
                     await sendEventMessage(
                         interaction.client,
                         { ...dummy, name },
-                        interaction.channel,
-                        true
+                        interaction.channel
                     );
+
+                    return interaction.reply({
+                        content: `✅ Event preview sent`,
+                        flags: 64
+                    });
 
                 }
 
