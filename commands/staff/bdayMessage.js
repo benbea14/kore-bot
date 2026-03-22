@@ -69,6 +69,64 @@ module.exports = {
                             { name: 'Server', value: 'server' }
                         )
                 )
+        )
+
+        // USER-SPECIFIC MESSAGE
+        .addSubcommand(sub =>
+            sub.setName('user-set')
+                .setDescription('Set a custom message for a specific user')
+                .addStringOption(opt =>
+                    opt.setName('type')
+                        .setDescription('Type')
+                        .setRequired(true)
+                        .addChoices(
+                            { name: 'Birthday', value: 'birthday' },
+                            { name: 'Event', value: 'event' }
+                        )
+                )
+                .addStringOption(opt =>
+                    opt.setName('target')
+                        .setDescription('User ID or name to personalize for')
+                        .setRequired(true)
+                )
+                .addStringOption(opt =>
+                    opt.setName('template')
+                        .setDescription('Custom message for this user')
+                        .setRequired(true)
+                )
+        )
+
+        .addSubcommand(sub =>
+            sub.setName('user-remove')
+                .setDescription('Remove custom message for a user')
+                .addStringOption(opt =>
+                    opt.setName('type')
+                        .setDescription('Type')
+                        .setRequired(true)
+                        .addChoices(
+                            { name: 'Birthday', value: 'birthday' },
+                            { name: 'Event', value: 'event' }
+                        )
+                )
+                .addStringOption(opt =>
+                    opt.setName('target')
+                        .setDescription('User ID or name')
+                        .setRequired(true)
+                )
+        )
+
+        .addSubcommand(sub =>
+            sub.setName('user-list')
+                .setDescription('List all user-specific messages')
+                .addStringOption(opt =>
+                    opt.setName('type')
+                        .setDescription('Type')
+                        .setRequired(true)
+                        .addChoices(
+                            { name: 'Birthday', value: 'birthday' },
+                            { name: 'Event', value: 'event' }
+                        )
+                )
         ),
 
     async execute(interaction) {
@@ -176,6 +234,77 @@ module.exports = {
                     flags: 64
                 });
 
+            }
+
+            // USER-SET (set personalized message for a user)
+            if (sub === 'user-set') {
+
+                const target = interaction.options.getString('target');
+                const template = interaction.options.getString('template');
+
+                if (!data.messages[type]) {
+                    data.messages[type] = {};
+                }
+
+                if (!data.messages[type].userMessages) {
+                    data.messages[type].userMessages = {};
+                }
+
+                data.messages[type].userMessages[target] = template;
+                bdayService.saveData(data);
+
+                return interaction.reply({
+                    content: `✅ Personal message set for **${target}** on ${type}!`,
+                    flags: 64
+                });
+            }
+
+            // USER-REMOVE (remove personalized message for a user)
+            if (sub === 'user-remove') {
+
+                const target = interaction.options.getString('target');
+
+                if (!data.messages[type]?.userMessages?.[target]) {
+                    return interaction.reply({
+                        content: `❌ No personal message found for **${target}**.`,
+                        flags: 64
+                    });
+                }
+
+                delete data.messages[type].userMessages[target];
+                bdayService.saveData(data);
+
+                return interaction.reply({
+                    content: `✅ Personal message for **${target}** removed.`,
+                    flags: 64
+                });
+            }
+
+            // USER-LIST (list all personalized messages)
+            if (sub === 'user-list') {
+
+                const userMessages = data.messages[type]?.userMessages;
+
+                if (!userMessages || Object.keys(userMessages).length === 0) {
+                    return interaction.reply({
+                        content: `❌ No personal messages set for ${type}.`,
+                        flags: 64
+                    });
+                }
+
+                const embed = new EmbedBuilder()
+                    .setTitle(`Personal Messages - ${type}`)
+                    .setColor(0x9B59B6)
+                    .setTimestamp();
+
+                Object.entries(userMessages).forEach(([target, tmpl]) => {
+                    embed.addFields({ 
+                        name: `👤 ${target}`, 
+                        value: tmpl.length > 100 ? tmpl.substring(0, 100) + '...' : tmpl
+                    });
+                });
+
+                return interaction.reply({ embeds: [embed] });
             }
 
         }
