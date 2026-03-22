@@ -32,10 +32,6 @@ const client = new Client({
 
 client.commands = new Collection();
 
-app.get('/', (req, res) => res.send('Bot is alive'));
-const PORT = process.env.PORT || 3000;
-app.listen(PORT, () => console.log(`🌱 Keep-alive server listening on port ${PORT}`));
-
 // ================= COMMAND HANDLER =================
 
 const foldersPath = path.join(__dirname, 'commands');
