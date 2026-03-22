@@ -3,12 +3,12 @@ const fs = require('fs');
 const path = require('path');
 
 const dataPath = path.join(__dirname, '..', '..', 'data', 'xp.json');
-const LEVEL_MULTIPLIER = 75; // XP pro Level
+const LEVEL_MULTIPLIER = 100; // XP pro Level (consistent with leveling.js)
 const USERS_PER_PAGE = 20;
 
 module.exports = {
   data: new SlashCommandBuilder()
-    .setName('leaderboard')
+    .setName('xpleaderboard')
     .setDescription('Shows the XP leaderboard with paging'),
 
   async execute(interaction) {
