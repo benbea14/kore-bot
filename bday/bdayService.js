@@ -1,5 +1,4 @@
 const fs = require('fs');
-const crypto = require('crypto');
 
 const dataPath = '/data/bday.json';
 
@@ -37,18 +36,12 @@ function saveData(data) {
     fs.writeFileSync(dataPath, JSON.stringify(data, null, 2));
 }
 
-// ID GENERATOR
-function generateId(prefix) {
-    return `${prefix}_${Date.now()}_${crypto.randomBytes(3).toString('hex')}`;
-}
-
 // ADD BIRTHDAY
 function addBirthday({ type, userId = null, name = null, day, month, year = null }) {
 
     const data = loadData();
 
     const newEntry = {
-        id: generateId("bd"),
         type,
         userId,
         name,
@@ -66,15 +59,17 @@ function addBirthday({ type, userId = null, name = null, day, month, year = null
 }
 
 // REMOVE BIRTHDAY
-function removeBirthday(id) {
+function removeBirthday({ type, userId = null, name = null }) {
     const data = loadData();
-
     const before = data.birthdays.length;
 
-    data.birthdays = data.birthdays.filter(b => b.id !== id);
+    if (type === 'user' && userId) {
+        data.birthdays = data.birthdays.filter(b => !(b.type === 'user' && b.userId === userId));
+    } else if (type === 'name' && name) {
+        data.birthdays = data.birthdays.filter(b => !(b.type === 'name' && b.name === name));
+    }
 
     saveData(data);
-
     return before !== data.birthdays.length;
 }
 
@@ -84,7 +79,6 @@ function addEvent({ name, day, month, year, recurring = false }) {
     const data = loadData();
 
     const newEvent = {
-        id: generateId("ev"),
         name,
         day,
         month,
@@ -100,15 +94,13 @@ function addEvent({ name, day, month, year, recurring = false }) {
 }
 
 // REMOVE EVENT
-function removeEvent(id) {
+function removeEvent(name) {
     const data = loadData();
-
     const before = data.events.length;
 
-    data.events = data.events.filter(e => e.id !== id);
+    data.events = data.events.filter(e => e.name !== name);
 
     saveData(data);
-
     return before !== data.events.length;
 }
 

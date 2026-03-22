@@ -4,47 +4,50 @@ const bdayService = require('../../bday/bdayService');
 module.exports = {
     data: new SlashCommandBuilder()
         .setName('bday-remove')
-        .setDescription('Remove a birthday by ID or user')
+        .setDescription('Remove a birthday by user or name')
         .setDefaultMemberPermissions(PermissionFlagsBits.ManageGuild)
-        .addStringOption(option =>
-            option.setName('id')
-                .setDescription('ID of the birthday to remove')
-                .setRequired(false)
-        )
         .addUserOption(option =>
             option.setName('user')
                 .setDescription('User to remove the birthday for')
                 .setRequired(false)
+        )
+        .addStringOption(option =>
+            option.setName('name')
+                .setDescription('Name to remove the birthday for')
+                .setRequired(false)
         ),
 
     async execute(interaction) {
-        const id = interaction.options.getString('id');
         const user = interaction.options.getUser('user');
+        const name = interaction.options.getString('name');
 
         try {
-            let removedCount = 0;
-
-            if (id) {
-                // per ID löschen
-                const removed = bdayService.removeBirthday(id);
-                if (removed) removedCount = 1;
-            } else if (user) {
-                // per User ID löschen
-                const birthdays = bdayService.getBirthdays().filter(b => b.userId === user.id);
-                for (const b of birthdays) {
-                    bdayService.removeBirthday(b.id);
-                    removedCount++;
-                }
-            } else {
+            if (!user && !name) {
                 return interaction.reply({
-                    content: '❌ You must provide either an ID or a user.',
+                    content: '❌ You must provide either a user or a name.',
                     flags: 64
                 });
             }
 
-            if (removedCount > 0) {
+            if (user && name) {
                 return interaction.reply({
-                    content: `✅ Removed ${removedCount} birthday(s).`,
+                    content: '❌ Please provide only user OR name, not both.',
+                    flags: 64
+                });
+            }
+
+            let removed = false;
+
+            if (user) {
+                removed = bdayService.removeBirthday({ type: 'user', userId: user.id });
+            } else if (name) {
+                removed = bdayService.removeBirthday({ type: 'name', name });
+            }
+
+            if (removed) {
+                const target = user?.username || name;
+                return interaction.reply({
+                    content: `✅ Birthday for **${target}** removed.`,
                     flags: 64
                 });
             } else {

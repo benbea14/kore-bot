@@ -84,10 +84,15 @@ module.exports = {
                             { name: 'Event', value: 'event' }
                         )
                 )
+                .addUserOption(opt =>
+                    opt.setName('user')
+                        .setDescription('Discord user')
+                        .setRequired(false)
+                )
                 .addStringOption(opt =>
-                    opt.setName('target')
-                        .setDescription('User ID or name to personalize for')
-                        .setRequired(true)
+                    opt.setName('name')
+                        .setDescription('Name to personalize for')
+                        .setRequired(false)
                 )
                 .addStringOption(opt =>
                     opt.setName('template')
@@ -108,10 +113,15 @@ module.exports = {
                             { name: 'Event', value: 'event' }
                         )
                 )
+                .addUserOption(opt =>
+                    opt.setName('user')
+                        .setDescription('Discord user')
+                        .setRequired(false)
+                )
                 .addStringOption(opt =>
-                    opt.setName('target')
-                        .setDescription('User ID or name')
-                        .setRequired(true)
+                    opt.setName('name')
+                        .setDescription('Name to personalize for')
+                        .setRequired(false)
                 )
         )
 
@@ -142,7 +152,11 @@ module.exports = {
 
                 const template = interaction.options.getString('template');
 
-                data.messages[type] = { template };
+                if (!data.messages[type]) {
+                    data.messages[type] = {};
+                }
+
+                data.messages[type].template = template;
                 bdayService.saveData(data);
 
                 return interaction.reply({
@@ -239,8 +253,26 @@ module.exports = {
             // USER-SET (set personalized message for a user)
             if (sub === 'user-set') {
 
-                const target = interaction.options.getString('target');
+                const userOption = interaction.options.getUser('user');
+                const nameOption = interaction.options.getString('name');
                 const template = interaction.options.getString('template');
+
+                if (!userOption && !nameOption) {
+                    return interaction.reply({
+                        content: '❌ Please provide either a user or a name.',
+                        flags: 64
+                    });
+                }
+
+                if (userOption && nameOption) {
+                    return interaction.reply({
+                        content: '❌ Please provide only user OR name, not both.',
+                        flags: 64
+                    });
+                }
+
+                const target = userOption?.id || nameOption;
+                const displayTarget = userOption?.username || nameOption;
 
                 if (!data.messages[type]) {
                     data.messages[type] = {};
@@ -254,7 +286,7 @@ module.exports = {
                 bdayService.saveData(data);
 
                 return interaction.reply({
-                    content: `✅ Personal message set for **${target}** on ${type}!`,
+                    content: `✅ Personal message set for **${displayTarget}** on ${type}!`,
                     flags: 64
                 });
             }
@@ -262,17 +294,41 @@ module.exports = {
             // USER-REMOVE (remove personalized message for a user)
             if (sub === 'user-remove') {
 
-                const target = interaction.options.getString('target');
+                const userOption = interaction.options.getUser('user');
+                const nameOption = interaction.options.getString('name');
 
-                if (!data.messages[type]?.userMessages?.[target]) {
+                if (!userOption && !nameOption) {
                     return interaction.reply({
-                        content: `❌ No personal message found for **${target}**.`,
+                        content: '❌ Please provide either a user or a name.',
+                        flags: 64
+                    });
+                }
+
+                if (userOption && nameOption) {
+                    return interaction.reply({
+                        content: '❌ Please provide only user OR name, not both.',
+                        flags: 64
+                    });
+                }
+
+                const target = userOption?.id || nameOption;
+                const displayTarget = userOption?.username || nameOption;
+
+                if (!data.messages[type]?.userMessages || !data.messages[type].userMessages[target]) {
+                    return interaction.reply({
+                        content: `❌ No personal message found for **${displayTarget}**.`,
                         flags: 64
                     });
                 }
 
                 delete data.messages[type].userMessages[target];
                 bdayService.saveData(data);
+
+                return interaction.reply({
+                    content: `✅ Personal message for **${displayTarget}** removed.`,
+                    flags: 64
+                });
+            }
 
                 return interaction.reply({
                     content: `✅ Personal message for **${target}** removed.`,

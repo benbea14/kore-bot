@@ -42,7 +42,7 @@ module.exports = {
             const event = bdayService.addEvent({ name, day, month, year, recurring });
 
             return interaction.reply({
-                content: `✅ Event **${name}** added!\nID: \`${event.id}\``,
+                content: `✅ Event **${name}** added!`,
                 flags: 64
             });
 

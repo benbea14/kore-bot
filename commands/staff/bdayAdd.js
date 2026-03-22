@@ -111,7 +111,7 @@ module.exports = {
                 });
 
                 return interaction.reply({
-                    content: `✅ Birthday added for ${user.tag}\nID: \`${entry.id}\``,
+                    content: `✅ Birthday added for ${user.tag}`,
                     flags: 64
                 });
             }
@@ -133,7 +133,7 @@ module.exports = {
                 });
 
                 return interaction.reply({
-                    content: `✅ Member birthday added for ${name}\nID: \`${entry.id}\``,
+                    content: `✅ Member birthday added for ${name}`,
                     flags: 64
                 });
             }
