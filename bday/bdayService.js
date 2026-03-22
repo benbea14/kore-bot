@@ -1,8 +1,21 @@
 const fs = require('fs');
 const crypto = require('crypto');
 
-const path = require('path');
-const dataPath = path.join(__dirname, '..', 'data', 'bday.json');
+const dataPath = '/data/bday.json';
+
+// 📁 Datei erstellen, falls sie nicht existiert
+if (!fs.existsSync(dataPath)) {
+    const initialData = {
+        meta: { version: 1 },
+        birthdays: [],
+        events: [],
+        server: null,
+        messages: {},
+        settings: {}
+    };
+    
+        fs.writeFileSync(dataPath, JSON.stringify(initialData, null, 2));
+    }
 
 // LOAD & SAVE
 function loadData() {

@@ -1,22 +1,51 @@
 const fs = require('fs');
-const path = require('path');
-const triggerPath = path.join(__dirname, '..', 'data', 'trigger.json');
 
+const triggerPath = '/data/trigger.json';
+
+// Initialize data file if it doesn't exist
+if (!fs.existsSync(triggerPath)) {
+    const initialData = {
+        enabled: false,
+        triggers: []
+    };
+
+    fs.writeFileSync(triggerPath, JSON.stringify(initialData, null, 2));
+}
+
+// Load triggers
 function loadTriggers() {
-    if (!fs.existsSync(triggerPath)) return { triggers: [] };
-    return JSON.parse(fs.readFileSync(triggerPath, 'utf8'));
+    try {
+        const data = JSON.parse(fs.readFileSync(triggerPath, 'utf8'));
+        return {
+            enabled: data.enabled ?? false,
+            triggers: data.triggers ?? []
+        };
+    } catch (err) {
+        console.error("Trigger data corrupted:", err);
+        return { enabled: false, triggers: [] };
+    }
 }
 
+// Save triggers
 function saveTriggers(data) {
-    fs.writeFileSync(triggerPath, JSON.stringify(data, null, 2));
+    try {
+        fs.writeFileSync(triggerPath, JSON.stringify(data, null, 2));
+    } catch (err) {
+        console.error("Error saving triggers:", err);
+    }
 }
 
+// Find matching triggers for a message
 function findMatchingTrigger(messageContent) {
-    const triggers = loadTriggers().triggers;
+    if (!messageContent) return [];
+    
+    const data = loadTriggers();
+    if (!data.triggers) return [];
+    
     const content = messageContent.toLowerCase();
 
-    return triggers.filter(trigger =>
-        trigger.keywords.some(k => content.includes(k))
+    return data.triggers.filter(trigger =>
+        trigger.keywords?.some(k => content.includes(k.toLowerCase()))
     );
 }
 

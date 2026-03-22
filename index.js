@@ -1,5 +1,3 @@
-const express = require('express');
-const app = express();
 const fs = require('node:fs');
 const path = require('node:path');
 const countingGame = require('./game/CountingGame');
@@ -32,11 +30,11 @@ const client = new Client({
   partials: [Partials.Message, Partials.Channel, Partials.Reaction],
 });
 
+client.commands = new Collection();
+
 app.get('/', (req, res) => res.send('Bot is alive'));
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => console.log(`🌱 Keep-alive server listening on port ${PORT}`));
-
-client.commands = new Collection();
 
 // ================= COMMAND HANDLER =================
 
@@ -99,7 +97,7 @@ client.on(Events.InteractionCreate, async interaction => {
 
     // Accept Rules Button
     if (customId === 'accept_rules') {
-      const role = interaction.guild.roles.cache.find(r => r.name === 'ARMY');
+      const role = interaction.guild.roles.cache.get(process.env.RULES_ROLE_ID);
 
       if (!role) {
         return interaction.reply({
@@ -200,7 +198,7 @@ client.on(Events.GuildMemberAdd, async member => {
 
 // ================= MESSAGE EVENTS =================
 
-client.on('messageCreate', async (message) => {
+client.on(Events.MessageCreate, async message => {
   if (message.author.bot) return;
 
   const LEVEL_MULTIPLIER = 100; // optional später exportieren
@@ -226,14 +224,14 @@ client.on('messageCreate', async (message) => {
 
     const fields = [
       { name: 'Level', value: `Lv **${result.level}**`, inline: true },
-      { name: 'Title', value: `${levelInfo.emoji} **${levelInfo.title}**`, inline: true },
+      { name: 'Title', value: `${levelInfo.emoji} **${result.title}**`, inline: true },
     ];
 
-    // Custom Title als Zusatz
-    if (result.title && result.title !== levelInfo.title) {
+    // Show custom title as additional field if it exists
+    if (result.customTitle) {
       fields.push({
-        name: 'Special',
-        value: `**${result.title}**`,
+        name: 'Special Title',
+        value: `**${result.customTitle}**`,
         inline: true
       });
     }
@@ -253,8 +251,8 @@ client.on('messageCreate', async (message) => {
 
     const embed = new EmbedBuilder()
       .setColor(0x9B59B6)
-      .setTitle(`🎉${displayName} reached Level ${result.level}🎉!`)
-      .setDescription(`Congrats!! You leveled up! 💜`)
+      .setTitle(`🎉 LEVEL UP! 🎉`)
+      .setDescription(`Congrats ${displayName}!! You leveled up! 💜`)
       .addFields(fields)
       .setFooter({ text: 'Auto XP System' })
       .setTimestamp();
@@ -269,7 +267,7 @@ client.on('messageCreate', async (message) => {
 
       const prestigeEmbed = new EmbedBuilder()
         .setColor(0x9B59B6)
-        .setTitle(`🌌 PRESTIGE UNLOCKED`)
+        .setTitle(`🌌 PRESTIGE UNLOCKED 🌌`)
         .setDescription(`💜 **${displayName}** reached Prestige ${stars}!`)
         .setFooter({ text: 'The journey begins again… stronger than ever.' });
 

@@ -1,19 +1,26 @@
 {
-  "name": "kore-code",
+  "name": "kora",
   "version": "1.0.0",
   "main": "index.js",
   "scripts": {
-    "deploy": "node deploy-commands.js"
+    "start": "node index.js",
+    "dev": "nodemon index.js",
+    "deploy": "node deploy-commands.js",
+    "refresh": "npm run deploy && npm run start"
+  },
+  "engines": {
+    "node": ">=18"
   },
   "keywords": [],
   "author": "",
   "license": "ISC",
   "description": "",
   "dependencies": {
-    "@discordjs/rest": "^2.6.0",
     "discord.js": "^14.25.1",
     "dotenv": "^17.3.1",
-    "express": "^5.2.1",
-    "node-cron": "^4.2.1"
+    "node-cron": "^3.0.2"
+  },
+  "devDependencies": {
+    "nodemon": "^3.1.14"
   }
 }
