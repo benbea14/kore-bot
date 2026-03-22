@@ -47,7 +47,7 @@ async function sendBirthdayMessage(client, entry, previewChannel = null) {
         server: client.guilds.cache.first()?.name ?? ""
     });
 
-    const randomImage = getRandomImage(entry.images);
+    const randomImage = getRandomImage(data.messages?.birthday?.images);
 
     if (useEmbed) {
 
@@ -93,7 +93,7 @@ async function sendEventMessage(client, event, previewChannel = null) {
         server: client.guilds.cache.first()?.name ?? ""
     });
 
-    const randomImage = getRandomImage(event.images);
+    const randomImage = getRandomImage(data.messages?.event?.images);
 
     if (useEmbed) {
 
