@@ -84,6 +84,11 @@ module.exports = {
                             { name: 'Event', value: 'event' }
                         )
                 )
+                .addStringOption(opt =>
+                    opt.setName('template')
+                        .setDescription('Custom message for this user')
+                        .setRequired(true)
+                )
                 .addUserOption(opt =>
                     opt.setName('user')
                         .setDescription('Discord user')
@@ -93,11 +98,6 @@ module.exports = {
                     opt.setName('name')
                         .setDescription('Name to personalize for')
                         .setRequired(false)
-                )
-                .addStringOption(opt =>
-                    opt.setName('template')
-                        .setDescription('Custom message for this user')
-                        .setRequired(true)
                 )
         )
 
