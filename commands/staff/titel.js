@@ -3,7 +3,7 @@ const { setCustomTitle } = require('../../XP/leveling');
 
 module.exports = {
   data: new SlashCommandBuilder()
-    .setName('xpCustomTitle')
+    .setName('xpcustomtitle')
     .setDescription('Set a custom title for a user')
     .addUserOption(o => o.setName('user').setDescription('User').setRequired(true))
     .addStringOption(o => o.setName('title').setDescription('Custom title').setRequired(true))
