@@ -1,12 +1,25 @@
 // features/daily/dailyService.js
 
 const fs = require('fs');
-const path = require('path');
+const dataPath = '/data/daily.json';
 
-const dataPath = path.join(__dirname, '..', 'data', 'daily.json');
+// 📁 Datei erstellen, falls sie nicht existiert
+if (!fs.existsSync(dataPath)) {
+    const initialData = {
+        enabled: false,
+        channel_id: null,
+        slots: [],
+        messages: []
+    };
+
+    fs.writeFileSync(dataPath, JSON.stringify(initialData, null, 2));
+}
 
 function loadData() {
-    if (!fs.existsSync(dataPath)) {
+    try {
+        return JSON.parse(fs.readFileSync(dataPath, 'utf8'));
+    } catch (err) {
+        console.error("Daily data corrupted or missing:", err);
         return {
             enabled: false,
             channel_id: null,
@@ -14,8 +27,6 @@ function loadData() {
             messages: []
         };
     }
-
-    return JSON.parse(fs.readFileSync(dataPath, 'utf8'));
 }
 
 function saveData(data) {

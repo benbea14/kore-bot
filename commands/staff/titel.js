@@ -10,11 +10,26 @@ module.exports = {
     .setDefaultMemberPermissions(PermissionFlagsBits.ManageGuild),
 
   async execute(interaction) {
-    const user = interaction.options.getUser('user');
-    const title = interaction.options.getString('title');
+    try {
+      const user = interaction.options.getUser('user');
+      const title = interaction.options.getString('title');
 
-    setCustomTitle(user.id, title);
+      const success = setCustomTitle(user.id, title);
+      
+      if (!success) {
+        return await interaction.reply({
+          content: '❌ Failed to set custom title. Invalid user.',
+          flags: 64
+        });
+      }
 
-    await interaction.reply(`✅ Custom title for ${user.username}: **${title}**`);
+      await interaction.reply(`✅ Custom title for ${user.username}: **${title}**`);
+    } catch (error) {
+      console.error('Error setting custom title:', error);
+      await interaction.reply({
+        content: '⚠️ Something went wrong while setting the custom title.',
+        flags: 64
+      });
+    }
   }
 };

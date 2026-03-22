@@ -38,7 +38,52 @@ async function countingGame(message) {
         currentNumber === 25 ||
         currentNumber === 50 ||
         currentNumber === 75 ||
-        currentNumber === 100
+        currentNumber === 100 ||
+
+        currentNumber === 125 ||
+        currentNumber === 150 ||
+        currentNumber === 175 ||
+        currentNumber === 200 ||
+
+        currentNumber === 225 ||
+        currentNumber === 250 ||
+        currentNumber === 275 ||
+        currentNumber === 300 ||
+
+        currentNumber === 325 ||
+        currentNumber === 350 ||
+        currentNumber === 375 ||
+        currentNumber === 400 ||
+
+        currentNumber === 425 ||
+        currentNumber === 450 ||
+        currentNumber === 475 ||
+        currentNumber === 500 ||
+
+        currentNumber === 525 ||
+        currentNumber === 550 ||
+        currentNumber === 575 ||
+        currentNumber === 600 ||
+
+        currentNumber === 625 ||
+        currentNumber === 650 ||
+        currentNumber === 675 ||
+        currentNumber === 700 ||
+
+        currentNumber === 725 ||
+        currentNumber === 750 ||
+        currentNumber === 775 ||
+        currentNumber === 800 ||
+
+        currentNumber === 825 ||
+        currentNumber === 850 ||
+        currentNumber === 875 ||
+        currentNumber === 900 ||
+        
+        currentNumber === 925 ||
+        currentNumber === 950 ||
+        currentNumber === 975 ||
+        currentNumber === 1000
     ) {
         const embed = new EmbedBuilder()
             .setColor(0x9B59B6)

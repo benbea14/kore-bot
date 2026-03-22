@@ -22,12 +22,16 @@ module.exports = {
                         .setRequired(true))
                 .addIntegerOption(option =>
                     option.setName('day')
-                        .setDescription('Birth day')
-                        .setRequired(true))
+                        .setDescription('Birth day (1-31)')
+                        .setRequired(true)
+                        .setMinValue(1)
+                        .setMaxValue(31))
                 .addIntegerOption(option =>
                     option.setName('month')
-                        .setDescription('Birth month')
-                        .setRequired(true))
+                        .setDescription('Birth month (1-12)')
+                        .setRequired(true)
+                        .setMinValue(1)
+                        .setMaxValue(12))
                 .addIntegerOption(option =>
                     option.setName('year')
                         .setDescription('Birth year')
@@ -45,12 +49,16 @@ module.exports = {
                         .setRequired(true))
                 .addIntegerOption(option =>
                     option.setName('day')
-                        .setDescription('Day')
-                        .setRequired(true))
+                        .setDescription('Day (1-31)')
+                        .setRequired(true)
+                        .setMinValue(1)
+                        .setMaxValue(31))
                 .addIntegerOption(option =>
                     option.setName('month')
-                        .setDescription('Month')
-                        .setRequired(true))
+                        .setDescription('Month (1-12)')
+                        .setRequired(true)
+                        .setMinValue(1)
+                        .setMaxValue(12))
                 .addIntegerOption(option =>
                     option.setName('year')
                         .setDescription('Year')
@@ -64,12 +72,16 @@ module.exports = {
                 .setDescription('Set server anniversary')
                 .addIntegerOption(option =>
                     option.setName('day')
-                        .setDescription('Day#')
-                        .setRequired(true))
+                        .setDescription('Day (1-31)')
+                        .setRequired(true)
+                        .setMinValue(1)
+                        .setMaxValue(31))
                 .addIntegerOption(option =>
                     option.setName('month')
-                        .setDescription('Month')
-                        .setRequired(true))
+                        .setDescription('Month (1-12)')
+                        .setRequired(true)
+                        .setMinValue(1)
+                        .setMaxValue(12))
                 .addIntegerOption(option =>
                     option.setName('year')
                         .setDescription('Year created')

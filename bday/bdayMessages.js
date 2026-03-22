@@ -20,14 +20,19 @@ function getRandomImage(images) {
 async function sendBirthdayMessage(client, entry) {
 
     const data = bdayService.loadData();
-    const channelId = data.settings.reminderChannelId;
+    const channelId = data.settings?.reminderChannelId;
     if (!channelId) return;
 
     const channel = client.channels.cache.get(channelId);
     if (!channel) return;
 
-    const template = data.messages.birthday.template;
-    const useEmbed = data.messages.birthday.useEmbed;
+    const template = data.messages?.birthday?.template;
+    const useEmbed = data.messages?.birthday?.useEmbed ?? true;
+
+    if (!template) {
+        console.warn('Birthday template not configured');
+        return;
+    }
 
     const name = entry.type === "user"
         ? `<@${entry.userId}>`
@@ -67,14 +72,19 @@ async function sendBirthdayMessage(client, entry) {
 async function sendEventMessage(client, event) {
 
     const data = bdayService.loadData();
-    const channelId = data.settings.reminderChannelId;
+    const channelId = data.settings?.reminderChannelId;
     if (!channelId) return;
 
     const channel = client.channels.cache.get(channelId);
     if (!channel) return;
 
-    const template = data.messages.event.template;
-    const useEmbed = data.messages.event.useEmbed;
+    const template = data.messages?.event?.template;
+    const useEmbed = data.messages?.event?.useEmbed ?? true;
+
+    if (!template) {
+        console.warn('Event template not configured');
+        return;
+    }
 
     const messageContent = formatTemplate(template, {
         name: event.name,
@@ -103,7 +113,6 @@ async function sendEventMessage(client, event) {
         });
     }
 }
-
 
 module.exports = {
     sendBirthdayMessage,

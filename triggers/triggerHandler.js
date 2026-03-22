@@ -13,42 +13,49 @@ function replacePlaceholders(text, message) {
 
 async function handleMessageTrigger(client, message) {
     if (message.author.bot) return;
+    
 
-    const data = loadTriggers();
-    if (!data.enabled) return; // Trigger global off
+    try {
+        const data = loadTriggers();
+        if (!data.enabled || !data.triggers?.length) return;
 
-    // Finde alle passenden Trigger für diese Nachricht
-    const triggers = data.triggers.filter(trigger =>
-        trigger.keywords.some(k => message.content.toLowerCase().includes(k))
-    );
+        // Find all matching triggers for this message
+        const matchingTriggers = data.triggers.filter(trigger =>
+            trigger.keywords?.some(k => message.content.toLowerCase().includes(k.toLowerCase()))
+        );
 
-    for (const trigger of triggers) {
-        // Chance prüfen
-        const roll = Math.random() * 100;
-        if (roll > trigger.chance) continue;
+        if (matchingTriggers.length === 0) return;
 
-        // Nachricht aus Kategorie ziehen
-        const msgData = dailyService.getRandomMessageByCategory(trigger.category);
-        if (!msgData) continue;
+        for (const trigger of matchingTriggers) {
+            // Check chance
+            const roll = Math.random() * 100;
+            if (roll > trigger.chance) continue;
 
-        // Platzhalter ersetzen
-        const finalText = replacePlaceholders(msgData.text, message);
+            // Get random message from category
+            const msgData = dailyService.getRandomMessageByCategory(trigger.category);
+            if (!msgData) continue;
 
-        // GIF auswählen, falls vorhanden
-        let files = [];
-        if (trigger.gif_urls && trigger.gif_urls.length > 0) {
-            const gifUrl = trigger.gif_urls[Math.floor(Math.random() * trigger.gif_urls.length)];
-            files.push(gifUrl);
+            // Replace placeholders
+            const finalText = replacePlaceholders(msgData.text, message);
+
+            // Send message
+            const { EmbedBuilder } = require('discord.js');
+
+            const embed = new EmbedBuilder()
+                .setDescription(finalText)
+                .setColor(0x9B59B6)
+                .setTimestamp();
+
+            // Select GIF if available
+            if (trigger.gif_urls?.length > 0) {
+                const gifUrl = trigger.gif_urls[Math.floor(Math.random() * trigger.gif_urls.length)];
+                embed.setImage(gifUrl);
+            }
+
+            await message.channel.send({ embeds: [embed] });
         }
-
-        // Nachricht senden
-        const { EmbedBuilder } = require('discord.js');
-
-        const embed = new EmbedBuilder()
-            .setDescription(content)  // content = Nachricht, die du normalerweise sendest
-            .setColor(0x9B59B6);
-
-        await channel.send({ embeds: [embed] });
+    } catch (error) {
+        console.error('Trigger handler error:', error);
     }
 }
 

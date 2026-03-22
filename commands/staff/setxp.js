@@ -3,7 +3,7 @@ const { addXP, getLevelData } = require('../../XP/leveling');
 
 module.exports = {
   data: new SlashCommandBuilder()
-    .setName('setxp')
+    .setName('xpset')
     .setDescription('Add XP to a user (staff only)')
     .addUserOption(o => o.setName('user').setDescription('User to give XP').setRequired(true))
     .addIntegerOption(o => o.setName('amount').setDescription('XP amount to add').setRequired(true))

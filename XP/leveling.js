@@ -1,32 +1,48 @@
 const fs = require('fs');
-const path = require('path');
-const dataPath = path.join(__dirname, '..', 'data', 'xp.json');
-let xpData = {};
+const path = '/data/xp.json'; // Railway Volume path
 
+let xpData = {};
+let xpPaused = false;
+
+// Initialize data file if it doesn't exist
+if (!fs.existsSync(path)) {
+  fs.writeFileSync(path, '{}');
+}
+
+// Load data on startup
 try {
-  xpData = JSON.parse(fs.readFileSync(dataPath, 'utf8'));
+  xpData = JSON.parse(fs.readFileSync(path, 'utf8'));
 } catch (err) {
-  console.error("XP Data corrupted, resetting...");
+  console.error("XP data corrupted, resetting...", err);
   xpData = {};
 }
 
+// Settings
 const COOLDOWN = 60 * 1000;
 const XP_PER_MESSAGE = [10, 20];
 const LEVEL_MULTIPLIER = 100;
 
 const cooldowns = new Map();
 
-function saveData() {
-  fs.writeFile(dataPath, JSON.stringify(xpData, null, 2), (err) => {
-    if (err) console.error("Save error:", err);
-  });
+function setXPPaused(state) {
+  xpPaused = state;
 }
 
+// Save data
+function saveData() {
+  try {
+    fs.writeFileSync(path, JSON.stringify(xpData, null, 2));
+  } catch (err) {
+    console.error("Save error:", err);
+  }
+}
+
+// Generate random XP between min and max
 function getRandomXP() {
   return Math.floor(Math.random() * (XP_PER_MESSAGE[1] - XP_PER_MESSAGE[0] + 1)) + XP_PER_MESSAGE[0];
 }
 
-// 🎖 TITEL SYSTEM
+// Title system
 const TITLES = [
   { level: 1, title: "Borahae Newbie", emoji: "🌱" },
   { level: 4, title: "Rising ARMY Star", emoji: "✨" },
@@ -54,7 +70,7 @@ const TITLES = [
   { level: 100, title: "Borahae Supreme", emoji: "👑💜💫" }
 ];
 
-// 🎖 PRESTIGE-TITEL SYSTEM
+// Prestige title system
 const PRESTIGE_TITLES = [
   { level: 1, title: "Borahae Return", emoji: "🌱" },
   { level: 4, title: "Rising ARMY Again", emoji: "✨" },
@@ -82,69 +98,146 @@ const PRESTIGE_TITLES = [
   { level: 100, title: "Borahae Supreme", emoji: "👑💜💫" }
 ];
 
+// Get title based on level and prestige
 function getLevelData(level, prestige = 0) {
+  if (!level || level < 0) return TITLES[0];
   const list = prestige > 0 ? PRESTIGE_TITLES : TITLES;
-
   let current = list[0];
+  
   for (const t of list) {
     if (level >= t.level) current = t;
   }
   return current;
 }
 
+// Update member nickname with prestige stars and level emoji
 async function updateNickname(member, level) {
-  if (!member.manageable) return;
-
-  const prestige = xpData[member.id]?.prestige || 0;
-  const levelInfo = getLevelData(level, prestige);
-  
-  // Entfernt alte Emojis
-  const baseName = member.displayName
-  .replace(/^✦+\s*\|\s*/, '')
-  .replace(/\s*\|\s*.*$/, '');
-
-  
-
-  const bigStars = Math.floor(prestige / 5);
-  const smallStars = prestige % 5;
-
-  const stars =
-    "✪".repeat(bigStars) +
-    "✦".repeat(smallStars);
-
-  const newNick = `${stars ? stars + " | " : ""}${baseName} | ${levelInfo.emoji}`;
+  if (!member || !member.manageable) return;
 
   try {
+    const prestige = xpData[member.id]?.prestige || 0;
+    const levelInfo = getLevelData(level, prestige);
+    
+    // Remove old emojis and stars
+    const baseName = member.displayName
+      .replace(/^✦+\s*\|\s*/, '')
+      .replace(/\s*\|\s*.*$/, '');
+
+    const bigStars = Math.floor(prestige / 5);
+    const smallStars = prestige % 5;
+    const stars = "✪".repeat(bigStars) + "✦".repeat(smallStars);
+    const newNick = `${stars ? stars + " | " : ""}${baseName} | ${levelInfo.emoji}`;
+
     await member.setNickname(newNick);
   } catch (error) {
-    console.log(`Couldn't set nickname for ${member.user.tag}: ${error}`);
+    console.warn(`Couldn't set nickname for ${member.user?.tag || 'unknown'}: ${error.message}`);
   }
 }
 
-// 🎯 MESSAGE HANDLER
+// Handle message XP gain
 async function handleMessage(message) {
-  if (!message.guild) return;
-  if (message.author.bot) return;
+  if (xpPaused || !message.guild || message.author?.bot) return;
 
-  const userId = message.author.id;
-  const now = Date.now();
+  try {
+    const userId = message.author.id;
+    const now = Date.now();
+    const key = `${message.guild.id}-${message.channel.id}-${userId}`;
 
-  // Optional: pro Server + Channel Cooldown
-  const key = `${message.guild.id}-${message.channel.id}-${userId}`;
+    if (cooldowns.has(key) && now - cooldowns.get(key) < COOLDOWN) return;
+    cooldowns.set(key, now);
 
-  if (cooldowns.has(key) && now - cooldowns.get(key) < COOLDOWN) return;
-  cooldowns.set(key, now);
+    if (!xpData[userId]) {
+      xpData[userId] = { xp: 0, level: 1, prestige: 0, title: null, customTitle: null };
+    }
 
+    const gainedXP = getRandomXP();
+    xpData[userId].xp += gainedXP;
+
+    let leveledUp = false;
+    let currentLevel = xpData[userId].level || 1;
+    let prestigeUp = false;
+
+    while (xpData[userId].xp >= currentLevel * LEVEL_MULTIPLIER) {
+      xpData[userId].xp -= currentLevel * LEVEL_MULTIPLIER;
+      currentLevel++;
+
+      if (currentLevel > 100) {
+        xpData[userId].prestige = (xpData[userId].prestige || 0) + 1;
+        currentLevel = 1;
+        prestigeUp = true;
+      }
+
+      xpData[userId].level = currentLevel;
+      leveledUp = true;
+    }
+
+    saveData();
+
+    if (leveledUp) {
+      if (message.member) {
+        await updateNickname(message.member, currentLevel);
+      }
+      
+      const levelInfo = getLevelData(currentLevel, xpData[userId].prestige);
+
+      return {
+        userId,
+        level: currentLevel,
+        xp: xpData[userId].xp,
+        leveledUp: true,
+        prestigeUp,
+        prestige: xpData[userId].prestige,
+        emoji: levelInfo.emoji,
+        title: levelInfo.title,
+        customTitle: xpData[userId].customTitle
+      };
+    }
+
+    return null;
+  } catch (error) {
+    console.error("Error handling message XP:", error);
+    return null;
+  }
+}
+
+// Get user XP data
+function getUser(userId) {
+  if (!userId) return null;
+  if (!xpData[userId]) return { xp: 0, level: 1, prestige: 0, title: null,customTitle: null };
+  return xpData[userId];
+}
+
+// Set user level
+function setLevel(userId, level) {
+  if (!userId || level < 1) return false;
+  if (!xpData[userId]) xpData[userId] = { xp: 0, level: 1, prestige: 0, title: null,customTitle: null };
+  xpData[userId].level = Math.max(1, Math.floor(level));
+  xpData[userId].xp = 0;
+  saveData();
+  return true;
+}
+
+// Set custom title
+function setCustomTitle(userId, customTitle) {
+  if (!userId) return false;
+  if (!xpData[userId]) xpData[userId] = { xp: 0, level: 1, prestige: 0, title: null, customTitle: null };
+  xpData[userId].customTitle = customTitle || null;
+  saveData();
+  return true;
+}
+
+// Add XP to user
+async function addXP(userId, amount, member = null) {
+  if (!userId || !amount || amount < 0) return { leveledUp: false };
+  
   if (!xpData[userId]) {
-  xpData[userId] = { xp: 0, level: 1, prestige: 0, title: null };
+    xpData[userId] = { xp: 0, level: 1, prestige: 0, title: null, customTitle: null };
   }
 
-  const gainedXP = getRandomXP();
-  xpData[userId].xp += gainedXP;
+  xpData[userId].xp += Math.floor(amount);
 
   let leveledUp = false;
-  let currentLevel = xpData[userId].level;
-
+  let currentLevel = xpData[userId].level || 1;
   let prestigeUp = false;
 
   while (xpData[userId].xp >= currentLevel * LEVEL_MULTIPLIER) {
@@ -164,91 +257,39 @@ async function handleMessage(message) {
   saveData();
 
   if (leveledUp) {
-    await updateNickname(message.member, currentLevel);
-    
-    const levelInfo = getLevelData(currentLevel, xpData[userId].prestige)
-
-    return {
-      userId,
-      level: currentLevel,
-      xp: xpData[userId].xp,
-      leveledUp: true,
-      prestigeUp,
-      prestige: xpData[userId].prestige,
-      emoji: levelInfo.emoji,
-      title: xpData[userId].customTitle || levelInfo.title
-    };
-  }
-
-  return null;
-}
-
-function getUser(userId) {
-  if (!xpData[userId]) return { xp: 0, level: 1, prestige: 0, title: null, customTitle: null };
-  return xpData[userId];
-}
-
-function setLevel(userId, level) {
-  if (!xpData[userId]) xpData[userId] = { xp: 0, level: 1, prestige: 0, title: null };
-
-  xpData[userId].level = level;
-  xpData[userId].xp = 0;
-  saveData();
-}
-
-function setCustomTitle(userId, customTitle) {
-  if (!xpData[userId]) xpData[userId] = { xp: 0, level: 1, prestige: 0, title: null, customTitle: null };
-  xpData[userId].customTitle = customTitle;
-  saveData();
-}
-
-async function addXP(userId, amount, member = null) {
-  if (!xpData[userId]) {
-    xpData[userId] = { xp: 0, level: 1, prestige: 0, title: null };
-  }
-
-  xpData[userId].xp += amount;
-
-  let leveledUp = false;
-  let currentLevel = xpData[userId].level;
-  let prestigeUp = false;
-
-  while (xpData[userId].xp >= currentLevel * LEVEL_MULTIPLIER) {
-    xpData[userId].xp -= currentLevel * LEVEL_MULTIPLIER;
-    currentLevel++;
-
-    if (currentLevel > 100) {
-      xpData[userId].prestige = (xpData[userId].prestige || 0) + 1;
-      currentLevel = 1;
-      prestigeUp = true;
+    if (member) {
+      await updateNickname(member, currentLevel);
     }
 
-    xpData[userId].level = currentLevel;
-    leveledUp = true;
+    return { leveledUp: true, level: currentLevel, prestigeUp };
   }
 
-  saveData();
-
-  const levelInfo = getLevelData(currentLevel, xpData[userId].prestige);
-
-  return {
-    userId,
-    level: currentLevel,
-    xp: xpData[userId].xp,
-    leveledUp,
-    prestigeUp,
-    prestige: xpData[userId].prestige,
-    emoji: levelInfo.emoji,
-    title: xpData[userId].customTitle || levelInfo.title
-  };
+  return { leveledUp: false };
 }
 
+// Reset user
+function resetUser(userId) {
+  if (!userId) return false;
+  delete xpData[userId];
+  saveData();
+  return true;
+}
+
+// Get all users
+function getAllUsers() {
+  return { ...xpData };
+}
+
+// Export functions
 module.exports = {
   handleMessage,
+  updateNickname,
+  getLevelData,
   getUser,
   setLevel,
   setCustomTitle,
-  getLevelData,
-  updateNickname,
-  addXP
+  addXP,
+  resetUser,
+  getAllUsers,
+  setXPPaused
 };
