@@ -61,7 +61,7 @@ module.exports = {
             const user = interaction.options.getUser('user');
             let entryKey;
 
-            if (type === 'birthday') entryKey = data.birthdays.find(e => e.id === user?.id) || { images: [] };
+            if (type === 'birthday') entryKey = data.birthdays.find(e => e.userId === user?.id) || { images: [] };
             else if (type === 'event') entryKey = data.events.find(e => e.id === user?.id) || { images: [] };
             else entryKey = data.server || { images: [] };
 
