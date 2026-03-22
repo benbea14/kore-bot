@@ -92,7 +92,7 @@ module.exports = {
                 .addUserOption(opt =>
                     opt.setName('user')
                         .setDescription('Discord user')
-                        .setRequired(false)
+                        .setRequired(true)
                 )
                 .addStringOption(opt =>
                     opt.setName('name')
@@ -116,7 +116,7 @@ module.exports = {
                 .addUserOption(opt =>
                     opt.setName('user')
                         .setDescription('Discord user')
-                        .setRequired(false)
+                        .setRequired(true)
                 )
                 .addStringOption(opt =>
                     opt.setName('name')
@@ -257,22 +257,9 @@ module.exports = {
                 const nameOption = interaction.options.getString('name');
                 const template = interaction.options.getString('template');
 
-                if (!userOption && !nameOption) {
-                    return interaction.reply({
-                        content: '❌ Please provide either a user or a name.',
-                        flags: 64
-                    });
-                }
-
-                if (userOption && nameOption) {
-                    return interaction.reply({
-                        content: '❌ Please provide only user OR name, not both.',
-                        flags: 64
-                    });
-                }
-
-                const target = userOption?.id || nameOption;
-                const displayTarget = userOption?.username || nameOption;
+                // nameOption takes priority if provided, otherwise use userOption
+                const target = nameOption || userOption?.id;
+                const displayTarget = nameOption || userOption?.username;
 
                 if (!data.messages[type]) {
                     data.messages[type] = {};
@@ -297,22 +284,9 @@ module.exports = {
                 const userOption = interaction.options.getUser('user');
                 const nameOption = interaction.options.getString('name');
 
-                if (!userOption && !nameOption) {
-                    return interaction.reply({
-                        content: '❌ Please provide either a user or a name.',
-                        flags: 64
-                    });
-                }
-
-                if (userOption && nameOption) {
-                    return interaction.reply({
-                        content: '❌ Please provide only user OR name, not both.',
-                        flags: 64
-                    });
-                }
-
-                const target = userOption?.id || nameOption;
-                const displayTarget = userOption?.username || nameOption;
+                // nameOption takes priority if provided, otherwise use userOption
+                const target = nameOption || userOption?.id;
+                const displayTarget = nameOption || userOption?.username;
 
                 if (!data.messages[type]?.userMessages || !data.messages[type].userMessages[target]) {
                     return interaction.reply({
