@@ -67,7 +67,7 @@ async function sendBirthdayMessage(client, entry, previewChannel = null) {
         user,
         age,
         type: "birthday",
-        server: client.guilds.cache.first()?.name ?? ""
+        server: channel.guild.name ?? ""
     });
 
     const randomImage = getRandomImage(data.messages?.birthday?.images);
