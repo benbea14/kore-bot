@@ -17,7 +17,7 @@ module.exports = {
     }
 
     try {
-      const dataPath = path.join(__dirname, '..', '..', 'XP', 'data.json');
+      const dataPath = '/XP/data.json';
 
       if (!fs.existsSync(dataPath)) {
         return interaction.reply({ 
