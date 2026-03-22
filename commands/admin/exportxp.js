@@ -2,13 +2,6 @@ const { SlashCommandBuilder, AttachmentBuilder } = require('discord.js');
 const fs = require('fs');
 const path = require('path');
 
-const dataPath = '/XP/data.json';
-
-console.log("PATH:", dataPath);
-console.log("EXISTS:", fs.existsSync(dataPath));
-
-console.log("XP CONTENT:", fs.existsSync('/XP') ? fs.readdirSync('/XP') : 'XP NOT FOUND');
-
 module.exports = {
   data: new SlashCommandBuilder()
     .setName('exportxp')
@@ -24,7 +17,7 @@ module.exports = {
     }
 
     try {
-      const dataPath = '/XP/data.json';
+      const dataPath = '/XP/lost+found';
 
       if (!fs.existsSync(dataPath)) {
         return interaction.reply({ 
