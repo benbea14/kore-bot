@@ -69,10 +69,7 @@ module.exports = {
                 const imageUrl = attachment?.url || url;
                 if (!imageUrl) return interaction.reply({ content: '❌ Provide an attachment or URL.', flags: 64 });
 
-                messageConfig.images.push({
-                    url: imageUrl,
-                    userId: interaction.user.id
-                });
+                messageConfig.images.push(imageUrl);
                 bdayService.saveData(data);
                 return interaction.reply({ content: `✅ Image added to ${type} messages!`, flags: 64 });
             }
@@ -95,24 +92,9 @@ module.exports = {
                     .setColor(0x9B59B6)
                     .setTimestamp();
 
-                for (let i = 0; i < messageConfig.images.length; i++) {
-                    const image = messageConfig.images[i];
-                    const imageUrl = typeof image === 'string' ? image : image.url;
-                    const userId = typeof image === 'string' ? null : image.userId;
-                    
-                    let displayName = 'Unknown';
-                    if (userId) {
-                        try {
-                            const member = await interaction.guild.members.fetch(userId);
-                            displayName = member.nickname || member.user.username;
-                        } catch (e) {
-                            displayName = 'User not found';
-                        }
-                    }
-                    
-                    const fieldName = userId ? `#${i + 1} (Added by: ${displayName})` : `#${i + 1}`;
-                    embed.addFields({ name: fieldName, value: imageUrl });
-                }
+                messageConfig.images.forEach((url, i) => {
+                    embed.addFields({ name: `#${i + 1}`, value: url });
+                });
 
                 return interaction.reply({ embeds: [embed] });
             }
