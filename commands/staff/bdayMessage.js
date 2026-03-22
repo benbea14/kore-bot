@@ -330,12 +330,6 @@ module.exports = {
                 });
             }
 
-                return interaction.reply({
-                    content: `✅ Personal message for **${target}** removed.`,
-                    flags: 64
-                });
-            }
-
             // USER-LIST (list all personalized messages)
             if (sub === 'user-list') {
 
