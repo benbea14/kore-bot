@@ -17,7 +17,7 @@ module.exports = {
     }
 
     try {
-      const dataPath = '/XP/lost+found';
+      const dataPath = '/data';
 
       if (!fs.existsSync(dataPath)) {
         return interaction.reply({ 
