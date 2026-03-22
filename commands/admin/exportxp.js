@@ -2,6 +2,13 @@ const { SlashCommandBuilder, AttachmentBuilder } = require('discord.js');
 const fs = require('fs');
 const path = require('path');
 
+const dataPath = '/data/xp.json';
+
+const data = fs.readFileSync(dataPath, 'utf-8');
+const json = JSON.parse(data);
+
+console.log(json);
+
 module.exports = {
   data: new SlashCommandBuilder()
     .setName('exportxp')
