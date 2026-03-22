@@ -4,8 +4,8 @@ const { sendBirthdayMessage, sendEventMessage } = require('../../bday/bdayMessag
 
 module.exports = {
     data: new SlashCommandBuilder()
-        .setName('bday-message')
-        .setDescription('Manage reminder messages')
+        .setName('message')
+        .setDescription('Manage reminder messages for birthdays, events and server')
         .setDefaultMemberPermissions(PermissionFlagsBits.ManageGuild)
 
         // SET
