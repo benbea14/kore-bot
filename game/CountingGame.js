@@ -73,8 +73,7 @@ async function countingGame(message) {
     await message.react("💜");
 
     // Milestones
-    if (state.currentNumber % 25 === 0 && state.currentNumber <= 1000
-    ) {
+    if (state.currentNumber % 25 === 0) {
         const embed = new EmbedBuilder()
             .setColor(0x9B59B6)
             .setTitle("🎉 A Milestone!")
