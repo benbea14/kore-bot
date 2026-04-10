@@ -2,11 +2,35 @@
 const dailyService = require('../daily/dailyService');
 const { loadTriggers } = require('./triggerService');
 
+function getDatePartsInTimezone() {
+    const timezone = process.env.DAILY_TIMEZONE || process.env.BDAY_TIMEZONE || 'Europe/Berlin';
+    const formatter = new Intl.DateTimeFormat('en-US', {
+        timeZone: timezone,
+        weekday: 'long',
+        year: 'numeric',
+        month: '2-digit',
+        day: '2-digit'
+    });
+
+    const parts = formatter.formatToParts(new Date());
+    const weekday = parts.find(part => part.type === 'weekday')?.value || '';
+    const month = parts.find(part => part.type === 'month')?.value || '';
+    const day = parts.find(part => part.type === 'day')?.value || '';
+    const year = parts.find(part => part.type === 'year')?.value || '';
+
+    return {
+        weekday,
+        date: `${month}/${day}/${year}`
+    };
+}
+
 function replacePlaceholders(text, message) {
+    const dateParts = getDatePartsInTimezone();
+
     return text
         .replace(/{server}/gi, message.guild?.name || '')
-        .replace(/{day}/gi, new Date().toLocaleDateString('en-US', { weekday: 'long' }))
-        .replace(/{date}/gi, new Date().toLocaleDateString())
+        .replace(/{day}/gi, dateParts.weekday)
+        .replace(/{date}/gi, dateParts.date)
         .replace(/{user}/gi, message.author.username)
         .replace(/{user.role=ARMY}/gi, message.member?.roles.cache.some(r => r.name === 'ARMY') ? message.author.username : '');
 }

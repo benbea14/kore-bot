@@ -1,8 +1,6 @@
 const { SlashCommandBuilder, EmbedBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle } = require('discord.js');
-const fs = require('fs');
-const path = require('path');
+const { getAllUsers } = require('../../XP/leveling');
 
-const dataPath = path.join(__dirname, '..', '..', 'data', 'xp.json');
 const LEVEL_MULTIPLIER = 100; // XP pro Level (consistent with leveling.js)
 const USERS_PER_PAGE = 20;
 
@@ -13,12 +11,7 @@ module.exports = {
 
   async execute(interaction) {
     try {
-      if (!fs.existsSync(dataPath)) {
-        return interaction.reply({ content: 'No XP data found yet.', flags: 64 });
-      }
-
-      const rawData = fs.readFileSync(dataPath, 'utf8');
-      const xpData = JSON.parse(rawData);
+      const xpData = getAllUsers();
       const users = Object.entries(xpData);
 
       if (users.length === 0) {

@@ -13,8 +13,24 @@ function formatTemplate(template, data) {
 
 // RANDOM IMAGE
 function getRandomImage(images) {
-    if (!images || images.length === 0) return null;
-    return images[Math.floor(Math.random() * images.length)];
+    if (!Array.isArray(images)) return null;
+
+    const validImages = images
+        .filter(image => typeof image === 'string')
+        .map(image => image.trim())
+        .filter(Boolean);
+
+    if (validImages.length === 0) return null;
+    return validImages[Math.floor(Math.random() * validImages.length)];
+}
+
+function pickImage(...imageLists) {
+    for (const imageList of imageLists) {
+        const picked = getRandomImage(imageList);
+        if (picked) return picked;
+    }
+
+    return null;
 }
 
 // SEND BIRTHDAY
@@ -56,10 +72,13 @@ async function sendBirthdayMessage(client, entry, previewChannel = null) {
 
     // CHECK FOR USER-SPECIFIC MESSAGE
     let template = data.messages.birthday.template;
+    let userImageKey = null;
     if (entry.type === "user" && data.messages?.birthday?.userMessages?.[entry.userId]) {
         template = data.messages.birthday.userMessages[entry.userId];
+        userImageKey = entry.userId;
     } else if (entry.type === "name" && data.messages?.birthday?.userMessages?.[entry.name]) {
         template = data.messages.birthday.userMessages[entry.name];
+        userImageKey = entry.name;
     }
 
     const messageContent = formatTemplate(template, {
@@ -70,7 +89,12 @@ async function sendBirthdayMessage(client, entry, previewChannel = null) {
         server: channel.guild.name ?? ""
     });
 
-    const randomImage = getRandomImage(data.messages?.birthday?.images);
+    // Get user-specific images if available, otherwise use global images
+    const randomImage = pickImage(
+        userImageKey ? data.messages?.birthday?.userImages?.[userImageKey] : null,
+        data.messages?.birthday?.images,
+        entry.images
+    );
 
     if (useEmbed) {
 
@@ -119,10 +143,15 @@ async function sendEventMessage(client, event, previewChannel = null) {
         user: event.name,
         age: "",
         type: "event",
-        server: client.guilds.cache.first()?.name ?? ""
+        server: channel.guild.name ?? ""
     });
 
-    const randomImage = getRandomImage(data.messages?.event?.images);
+    // Get event-specific images if available, otherwise use global images
+    const randomImage = pickImage(
+        data.messages?.event?.userImages?.[event.name],
+        data.messages?.event?.images,
+        event.images
+    );
 
     if (useEmbed) {
 

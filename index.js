@@ -1,7 +1,9 @@
 const fs = require('node:fs');
 const path = require('node:path');
+const http = require('node:http');
 const countingGame = require('./game/CountingGame');
 const { handleMessage, updateNickname, getLevelData } = require('./XP/leveling');
+const { createBackup } = require('./commands/admin/xpBackup');
 const { startScheduler } = require('./bday/bdayScheduler');
 const { startDailyScheduler } = require('./daily/dailyScheduler');
 const { handleMessageTrigger } = require('./triggers/triggerHandler');
@@ -32,6 +34,20 @@ const client = new Client({
 
 client.commands = new Collection();
 
+const keepAliveServer = http.createServer((req, res) => {
+  if (req.url === '/') {
+    res.writeHead(200, { 'Content-Type': 'text/plain; charset=utf-8' });
+    res.end('Bot is alive');
+    return;
+  }
+
+  res.writeHead(404, { 'Content-Type': 'text/plain; charset=utf-8' });
+  res.end('Not found');
+});
+
+const PORT = process.env.PORT || 3000;
+keepAliveServer.listen(PORT, () => console.log(`🌱 Keep-alive server listening on port ${PORT}`));
+
 // ================= COMMAND HANDLER =================
 
 const foldersPath = path.join(__dirname, 'commands');
@@ -54,6 +70,9 @@ for (const folder of commandFolders) {
 
 client.once(Events.ClientReady, async () => {
   console.log(`✅ Logged in as ${client.user.tag}`);
+
+  // Create backup on startup
+  createBackup();
 
   startScheduler(client);
   startDailyScheduler(client);
@@ -102,7 +121,22 @@ client.on(Events.InteractionCreate, async interaction => {
         });
       }
 
-      await interaction.member.roles.add(role);
+      if (!role.editable) {
+        return interaction.reply({
+          content: '⚠️ I cannot assign the ARMY role due to role hierarchy/permissions.',
+          flags: 64,
+        });
+      }
+
+      try {
+        await interaction.member.roles.add(role);
+      } catch (error) {
+        console.error('Role assignment error (accept_rules):', error);
+        return interaction.reply({
+          content: '⚠️ I could not assign the ARMY role. Please contact staff.',
+          flags: 64,
+        });
+      }
 
       return interaction.reply({
         content: '✅ You received the ARMY role.',
@@ -132,7 +166,22 @@ client.on(Events.InteractionCreate, async interaction => {
         });
       }
 
-      await interaction.member.roles.add(role);
+      if (!role.editable) {
+        return interaction.reply({
+          content: `⚠️ I cannot assign "${roleName}" due to role hierarchy/permissions.`,
+          flags: 64,
+        });
+      }
+
+      try {
+        await interaction.member.roles.add(role);
+      } catch (error) {
+        console.error(`Role assignment error (${roleName}):`, error);
+        return interaction.reply({
+          content: `⚠️ I could not assign ${roleName}. Please contact staff.`,
+          flags: 64,
+        });
+      }
 
       return interaction.reply({
         content: `💜 You now have ${roleName}!`,
@@ -156,7 +205,7 @@ client.on(Events.GuildMemberAdd, async member => {
     .setTitle(`🎉 Welcome to ${member.guild.name}!`)
     .setDescription(
       `Hey ${member}! Welcome to our server! 💜\n
-      Make sure to agree to our <#${RULES_CHANNEL_ID}> to get the ARMY role!\n
+      Make sure to agree to our <#${RULES_CHANNEL_ID}> to get the ARMY role!
       With that you can join the VC and write in all the chats!`
     )
     .setImage('attachment://welcome.png')
