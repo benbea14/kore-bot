@@ -111,9 +111,22 @@ module.exports = {
                     .setFooter({ text: `Total messages: ${data.messages.length}` })
                     .setTimestamp();
 
-                data.messages.forEach((msg, i) => {
-                    embed.addFields({ name: `#${i + 1} [${msg.category}]`, value: msg.text });
+                // Discord allows max 25 fields per embed
+                const messagesToShow = data.messages.slice(0, 25);
+                const hasMore = data.messages.length > 25;
+
+                messagesToShow.forEach((msg, i) => {
+                    // Keep name under 25 chars: "#1 [morning]"
+                    const name = `#${i + 1} [${msg.category.substring(0, 12)}]`;
+                    embed.addFields({ name: name, value: msg.text });
                 });
+
+                if (hasMore) {
+                    embed.addFields({
+                        name: '⚠️ Limited Display',
+                        value: `Showing first 25 of ${data.messages.length} messages.`
+                    });
+                }
 
                 return interaction.reply({ embeds: [embed] });
             }

@@ -53,7 +53,6 @@ module.exports = {
       return interaction.reply({
         content: '📦 XP Backup created:',
         files: [backup],
-        flags: 64
       });
 
     } catch (err) {

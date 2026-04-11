@@ -4,6 +4,20 @@ const { sendBirthdayMessage, sendEventMessage } = require('./bdayMessages');
 
 let schedulerStarted = false;
 
+function getDatePartsInTimezone(timezone) {
+    const formatter = new Intl.DateTimeFormat('en-GB', {
+        timeZone: timezone,
+        day: 'numeric',
+        month: 'numeric'
+    });
+
+    const parts = formatter.formatToParts(new Date());
+    const day = Number(parts.find(part => part.type === 'day')?.value);
+    const month = Number(parts.find(part => part.type === 'month')?.value);
+
+    return { day, month };
+}
+
 function startScheduler(client) {
 
     if (schedulerStarted) return;
@@ -11,15 +25,14 @@ function startScheduler(client) {
 
     console.log("📅 Birthday Scheduler started.");
 
-    cron.schedule('0 0 * * *', async () => {
+    const schedulerTimezone = process.env.BDAY_TIMEZONE || 'Europe/Berlin';
+
+    cron.schedule('0 1 * * *', async () => {
         try {
             console.log("⏰ Running daily birthday check...");
 
             const data = bdayService.loadData();
-            const today = new Date();
-
-            const todayDay = today.getDate();
-            const todayMonth = today.getMonth() + 1;
+            const { day: todayDay, month: todayMonth } = getDatePartsInTimezone(schedulerTimezone);
 
             // BIRTHDAYS
             for (const entry of data.birthdays) {
@@ -52,7 +65,6 @@ function startScheduler(client) {
             }
 
             data.events = remainingEvents;
-            bdayService.saveData(data);
 
             // SERVER ANNIVERSARY
             if (data.server && data.server.day === todayDay && data.server.month === todayMonth) {
@@ -71,7 +83,7 @@ function startScheduler(client) {
             console.error('Scheduler error:', error);
         }
     }, {
-        timezone: "Europe/Berlin"
+        timezone: schedulerTimezone
     });
 
 }

@@ -37,6 +37,16 @@ function saveData() {
   }
 }
 
+function reloadXPDataFromDisk() {
+  try {
+    xpData = JSON.parse(fs.readFileSync(path, 'utf8'));
+    return true;
+  } catch (err) {
+    console.error("Reload error:", err);
+    return false;
+  }
+}
+
 // Generate random XP between min and max
 function getRandomXP() {
   return Math.floor(Math.random() * (XP_PER_MESSAGE[1] - XP_PER_MESSAGE[0] + 1)) + XP_PER_MESSAGE[0];
@@ -118,10 +128,11 @@ async function updateNickname(member, level) {
     const prestige = xpData[member.id]?.prestige || 0;
     const levelInfo = getLevelData(level, prestige);
     
-    // Remove old emojis and stars
-    const baseName = member.displayName
-      .replace(/^✦+\s*\|\s*/, '')
-      .replace(/\s*\|\s*.*$/, '');
+    // Keep only the original name part and ignore any old title/custom suffixes.
+    const withoutPrestigePrefix = member.displayName
+      .replace(/^[✪✦]+\s*\|\s*/, '')
+      .trim();
+    const baseName = withoutPrestigePrefix.split('|')[0].trim();
 
     const bigStars = Math.floor(prestige / 5);
     const smallStars = prestige % 5;
@@ -291,5 +302,6 @@ module.exports = {
   addXP,
   resetUser,
   getAllUsers,
-  setXPPaused
+  setXPPaused,
+  reloadXPDataFromDisk
 };
