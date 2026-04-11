@@ -1,6 +1,6 @@
 const cron = require('node-cron');
 const bdayService = require('./bdayService');
-const { sendBirthdayMessage, sendEventMessage } = require('./bdayMessages');
+const { sendBirthdayMessage, sendEventMessage, sendServerMessage } = require('./bdayMessages');
 
 let schedulerStarted = false;
 
@@ -69,10 +69,7 @@ function startScheduler(client) {
             // SERVER ANNIVERSARY
             if (data.server && data.server.day === todayDay && data.server.month === todayMonth) {
                 try {
-                    const channel = client.channels.cache.get(process.env.BDAY_CHANNEL_ID);
-                    if (channel) {
-                        await channel.send(`🎉 Happy Server Anniversary! 💜`);
-                    }
+                    await sendServerMessage(client);
                 } catch (err) {
                     console.error('Error sending server anniversary message:', err);
                 }

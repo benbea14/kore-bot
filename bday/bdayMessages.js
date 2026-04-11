@@ -17,7 +17,16 @@ function getRandomImage(images) {
 
     const validImages = images
         .filter(image => typeof image === 'string')
-        .map(image => image.trim())
+        .map(image => image.trim().replace(/^<(.+)>$/, '$1'))
+        .filter(Boolean)
+        .filter(image => {
+            try {
+                const parsed = new URL(image);
+                return parsed.protocol === 'http:' || parsed.protocol === 'https:';
+            } catch (_) {
+                return false;
+            }
+        })
         .filter(Boolean);
 
     if (validImages.length === 0) return null;
@@ -172,7 +181,52 @@ async function sendEventMessage(client, event, previewChannel = null) {
     }
 }
 
+// SEND SERVER ANNIVERSARY
+async function sendServerMessage(client, previewChannel = null) {
+
+    const data = bdayService.loadData();
+    const channelId = process.env.BDAY_CHANNEL_ID;
+    if (!channelId && !previewChannel) return;
+
+    const channel = previewChannel || client.channels.cache.get(channelId);
+    if (!channel) return;
+
+    const useEmbed = data.messages?.server?.useEmbed ?? true;
+    const template =
+        data.messages?.server?.template ||
+        "🎉 Happy Server Anniversary {server}! 💜";
+
+    const messageContent = formatTemplate(template, {
+        name: "",
+        user: "",
+        age: "",
+        type: "server",
+        server: channel.guild.name ?? ""
+    });
+
+    const randomImage = pickImage(data.messages?.server?.images);
+
+    if (useEmbed) {
+
+        const embed = new EmbedBuilder()
+            .setColor(0x9B59B6)
+            .setDescription(messageContent);
+
+        if (randomImage) embed.setImage(randomImage);
+
+        await channel.send({ embeds: [embed] });
+
+    } else {
+
+        await channel.send({
+            content: messageContent,
+            files: randomImage ? [randomImage] : []
+        });
+    }
+}
+
 module.exports = {
     sendBirthdayMessage,
-    sendEventMessage
+    sendEventMessage,
+    sendServerMessage
 };

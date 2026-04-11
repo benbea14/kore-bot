@@ -1,6 +1,6 @@
 const { SlashCommandBuilder, PermissionFlagsBits, EmbedBuilder } = require('discord.js');
 const bdayService = require('../../bday/bdayService');
-const { sendBirthdayMessage, sendEventMessage } = require('../../bday/bdayMessages');
+const { sendBirthdayMessage, sendEventMessage, sendServerMessage } = require('../../bday/bdayMessages');
 
 module.exports = {
     data: new SlashCommandBuilder()
@@ -211,20 +211,15 @@ module.exports = {
                 }
 
                 else if (type === 'server') {
+                    await sendServerMessage(
+                        interaction.client,
+                        interaction.channel
+                    );
 
-                    const template =
-                        data.messages.server?.template ||
-                        "🎉 Happy Server Anniversary {server}! 💜";
-
-                    const embed = new EmbedBuilder()
-                        .setTitle("Server Preview")
-                        .setDescription(
-                            template.replace(/{server}/g, interaction.guild.name)
-                        )
-                        .setColor(0x9B59B6)
-                        .setTimestamp();
-
-                    await interaction.reply({ embeds: [embed] });
+                    return interaction.reply({
+                        content: `✅ Server preview sent`,
+                        flags: 64
+                    });
 
                 }
 

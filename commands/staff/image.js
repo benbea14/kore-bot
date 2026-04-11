@@ -54,6 +54,22 @@ module.exports = {
         const type = interaction.options.getString('type');
         const data = bdayService.loadData();
 
+        function normalizeImageUrl(raw) {
+            if (!raw || typeof raw !== 'string') return null;
+
+            const cleaned = raw.trim().replace(/^<(.+)>$/, '$1');
+
+            try {
+                const parsed = new URL(cleaned);
+                if (parsed.protocol !== 'http:' && parsed.protocol !== 'https:') {
+                    return null;
+                }
+                return parsed.toString();
+            } catch (_) {
+                return null;
+            }
+        }
+
         try {
             if (!data.messages[type]) {
                 data.messages[type] = { images: [] };
@@ -66,7 +82,7 @@ module.exports = {
             if (sub === 'add') {
                 const attachment = interaction.options.getAttachment('attachment');
                 const url = interaction.options.getString('url');
-                const imageUrl = attachment?.url || url;
+                const imageUrl = normalizeImageUrl(attachment?.url || url);
                 if (!imageUrl) return interaction.reply({ content: '❌ Provide an attachment or URL.', flags: 64 });
 
                 messageConfig.images.push(imageUrl);
