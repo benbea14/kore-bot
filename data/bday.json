@@ -1,0 +1,67 @@
+{
+  "meta": {
+    "version": 1
+  },
+  "birthdays": [
+    {
+      "id": "bd_1772627505613_849468",
+      "type": "name",
+      "userId": null,
+      "name": "JK",
+      "day": 8,
+      "month": 4,
+      "year": null,
+      "recurring": true,
+      "images": []
+    },
+    {
+      "id": "bd_1772665509274_705a4c",
+      "type": "user",
+      "userId": "469933093537447980",
+      "name": null,
+      "day": 5,
+      "month": 3,
+      "year": null,
+      "recurring": true,
+      "images": []
+    }
+  ],
+  "events": [
+    {
+      "id": "ev_1772628044243_ad82f2",
+      "name": "Hässlich",
+      "day": 7,
+      "month": 9,
+      "year": null,
+      "recurring": true,
+      "images": []
+    }
+  ],
+  "server": {
+    "id": "server_001",
+    "day": 6,
+    "month": 11,
+    "year": 2025,
+    "recurring": true,
+    "images": []
+  },
+  "messages": {
+    "birthday": {
+      "template": "Alles Gute",
+      "useEmbed": true
+    },
+    "event": {
+      "template": "📅 Today is {name}! 💜",
+      "useEmbed": true
+    },
+    "server": {
+      "template": "🎉 Happy Server Anniversary! 💜",
+      "useEmbed": true
+    }
+  },
+  "settings": {
+    "timezone": "Europe/Berlin",
+    "reminderChannelId": null,
+    "defaultRoleId": null
+  }
+}

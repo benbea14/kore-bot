@@ -36,7 +36,7 @@ function saveData(data) {
 }
 
 // ADD BIRTHDAY
-function addBirthday({ type, userId = null, name = null, day, month, year = null }) {
+function addBirthday({ type, userId = null, name = null, displayName = null, day, month, year = null }) {
 
     const data = loadData();
 
@@ -44,6 +44,7 @@ function addBirthday({ type, userId = null, name = null, day, month, year = null
         type,
         userId,
         name,
+        displayName: type === 'user' ? displayName : null,
         day,
         month,
         year,
@@ -58,14 +59,24 @@ function addBirthday({ type, userId = null, name = null, day, month, year = null
 }
 
 // REMOVE BIRTHDAY
-function removeBirthday({ type, userId = null, name = null }) {
+function removeBirthday({ type, userId = null, name = null, displayName = null }) {
     const data = loadData();
     const before = data.birthdays.length;
 
     if (type === 'user' && userId) {
         data.birthdays = data.birthdays.filter(b => !(b.type === 'user' && b.userId === userId));
     } else if (type === 'name' && name) {
-        data.birthdays = data.birthdays.filter(b => !(b.type === 'name' && b.name === name));
+        if (name.trim().toLowerCase() === 'unknown') {
+            data.birthdays = data.birthdays.filter(b => !(
+                b.type === 'user' &&
+                !b.name &&
+                !b.displayName
+            ));
+        } else {
+            data.birthdays = data.birthdays.filter(b => !(b.type === 'name' && b.name === name));
+        }
+    } else if (type === 'displayName' && displayName) {
+        data.birthdays = data.birthdays.filter(b => !(b.type === 'user' && b.displayName === displayName && !b.name));
     }
 
     saveData(data);

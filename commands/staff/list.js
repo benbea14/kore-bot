@@ -83,6 +83,8 @@ module.exports = {
                         name = `<@${e.userId}>`; // saubere Erwähnung
                     } else if (e.name) {
                         name = e.name; // Fallback Name aus JSON
+                    } else if (e.displayName) {
+                        name = `${e.displayName} (left)`;
                     } else {
                         name = 'Unknown';
                     }

@@ -133,7 +133,7 @@ client.on(Events.InteractionCreate, async interaction => {
       } catch (error) {
         console.error('Role assignment error (accept_rules):', error);
         return interaction.reply({
-          content: '⚠️ I could not assign the ARMY role. Please contact technical admin.',
+          content: '⚠️ I could not assign the ARMY role. Please contact staff.',
           flags: 64,
         });
       }
@@ -178,7 +178,7 @@ client.on(Events.InteractionCreate, async interaction => {
       } catch (error) {
         console.error(`Role assignment error (${roleName}):`, error);
         return interaction.reply({
-          content: `⚠️ I could not assign ${roleName}. Please contact technical admin.`,
+          content: `⚠️ I could not assign ${roleName}. Please contact staff.`,
           flags: 64,
         });
       }

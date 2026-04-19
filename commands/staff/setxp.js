@@ -14,6 +14,14 @@ module.exports = {
     const amount = interaction.options.getInteger('amount');
 
     const result = await addXP(user.id, amount, interaction.guild.members.cache.get(user.id)); // gibt Objekt mit level, leveledUp, title etc.
+
+    if (result.excluded) {
+      return interaction.reply({
+        content: `🚫 <@${user.id}> is excluded from the XP system. Use /xpuser start first.`,
+        flags: 64
+      });
+    }
+
     const levelInfo = getLevelData(result.level);
 
     let reply = `✅ Added **${amount} XP** to <@${user.id}>.\n`;

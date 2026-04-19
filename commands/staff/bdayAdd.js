@@ -105,6 +105,7 @@ module.exports = {
                 const entry = bdayService.addBirthday({
                     type: "user",
                     userId: user.id,
+                    displayName: user.username,
                     day,
                     month,
                     year
@@ -112,7 +113,6 @@ module.exports = {
 
                 return interaction.reply({
                     content: `✅ Birthday added for ${user.tag}`,
-                    flags: 64
                 });
             }
 
@@ -134,7 +134,6 @@ module.exports = {
 
                 return interaction.reply({
                     content: `✅ Member birthday added for ${name}`,
-                    flags: 64
                 });
             }
 
@@ -160,7 +159,6 @@ module.exports = {
 
                 return interaction.reply({
                     content: `✅ Server anniversary set!`,
-                    flags: 64
                 });
             }
 

@@ -52,6 +52,23 @@ function getRandomXP() {
   return Math.floor(Math.random() * (XP_PER_MESSAGE[1] - XP_PER_MESSAGE[0] + 1)) + XP_PER_MESSAGE[0];
 }
 
+function isUserExcluded(userId) {
+  if (!userId || !xpData[userId]) return false;
+  return xpData[userId].excluded === true;
+}
+
+function setUserExcluded(userId, excluded) {
+  if (!userId) return false;
+
+  if (!xpData[userId]) {
+    xpData[userId] = { xp: 0, level: 1, prestige: 0, title: null, customTitle: null, excluded: false };
+  }
+
+  xpData[userId].excluded = Boolean(excluded);
+  saveData();
+  return true;
+}
+
 // Title system
 const TITLES = [
   { level: 1, title: "Borahae Newbie", emoji: "🌱" },
@@ -151,6 +168,8 @@ async function handleMessage(message) {
 
   try {
     const userId = message.author.id;
+    if (isUserExcluded(userId)) return;
+
     const now = Date.now();
     const key = `${message.guild.id}-${message.channel.id}-${userId}`;
 
@@ -158,7 +177,7 @@ async function handleMessage(message) {
     cooldowns.set(key, now);
 
     if (!xpData[userId]) {
-      xpData[userId] = { xp: 0, level: 1, prestige: 0, title: null, customTitle: null };
+      xpData[userId] = { xp: 0, level: 1, prestige: 0, title: null, customTitle: null, excluded: false };
     }
 
     const gainedXP = getRandomXP();
@@ -214,14 +233,17 @@ async function handleMessage(message) {
 // Get user XP data
 function getUser(userId) {
   if (!userId) return null;
-  if (!xpData[userId]) return { xp: 0, level: 1, prestige: 0, title: null,customTitle: null };
+  if (!xpData[userId]) return { xp: 0, level: 1, prestige: 0, title: null, customTitle: null, excluded: false };
   return xpData[userId];
 }
 
 // Set user level
 function setLevel(userId, level) {
   if (!userId || level < 1) return false;
-  if (!xpData[userId]) xpData[userId] = { xp: 0, level: 1, prestige: 0, title: null,customTitle: null };
+  if (!xpData[userId]) xpData[userId] = { xp: 0, level: 1, prestige: 0, title: null, customTitle: null, excluded: false };
+
+  if (isUserExcluded(userId)) return false;
+
   xpData[userId].level = Math.max(1, Math.floor(level));
   xpData[userId].xp = 0;
   saveData();
@@ -231,7 +253,7 @@ function setLevel(userId, level) {
 // Set custom title
 function setCustomTitle(userId, customTitle) {
   if (!userId) return false;
-  if (!xpData[userId]) xpData[userId] = { xp: 0, level: 1, prestige: 0, title: null, customTitle: null };
+  if (!xpData[userId]) xpData[userId] = { xp: 0, level: 1, prestige: 0, title: null, customTitle: null, excluded: false };
   xpData[userId].customTitle = customTitle || null;
   saveData();
   return true;
@@ -240,9 +262,13 @@ function setCustomTitle(userId, customTitle) {
 // Add XP to user
 async function addXP(userId, amount, member = null) {
   if (!userId || !amount || amount < 0) return { leveledUp: false };
+
+  if (isUserExcluded(userId)) {
+    return { leveledUp: false, excluded: true };
+  }
   
   if (!xpData[userId]) {
-    xpData[userId] = { xp: 0, level: 1, prestige: 0, title: null, customTitle: null };
+    xpData[userId] = { xp: 0, level: 1, prestige: 0, title: null, customTitle: null, excluded: false };
   }
 
   xpData[userId].xp += Math.floor(amount);
@@ -286,6 +312,15 @@ function resetUser(userId) {
   return true;
 }
 
+function getLeaderboardUsers() {
+  const filtered = {};
+  for (const [userId, data] of Object.entries(xpData)) {
+    if (data?.excluded) continue;
+    filtered[userId] = data;
+  }
+  return filtered;
+}
+
 // Get all users
 function getAllUsers() {
   return { ...xpData };
@@ -302,6 +337,9 @@ module.exports = {
   addXP,
   resetUser,
   getAllUsers,
+  getLeaderboardUsers,
+  isUserExcluded,
+  setUserExcluded,
   setXPPaused,
   reloadXPDataFromDisk
 };

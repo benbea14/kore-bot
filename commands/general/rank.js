@@ -1,5 +1,5 @@
 const { SlashCommandBuilder, EmbedBuilder } = require('discord.js');
-const { getUser, getLevelData } = require('../../XP/leveling');
+const { getUser, getLevelData, isUserExcluded } = require('../../XP/leveling');
 
 const LEVEL_MULTIPLIER = 100;
 
@@ -12,6 +12,14 @@ module.exports = {
     try {
       const user = interaction.user;
       const member = interaction.member;
+
+      if (isUserExcluded(user.id)) {
+        return interaction.reply({
+          content: '🚫 You are currently excluded from the XP system.',
+          flags: 64
+        });
+      }
+
       const data = getUser(user.id);
       const levelInfo = getLevelData(data.level);
 

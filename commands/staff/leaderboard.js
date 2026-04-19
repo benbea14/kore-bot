@@ -1,5 +1,5 @@
 const { SlashCommandBuilder, EmbedBuilder } = require('discord.js');
-const { getAllUsers } = require('../../XP/leveling');
+const { getLeaderboardUsers } = require('../../XP/leveling');
 
 const LEVEL_MULTIPLIER = 100; // XP pro Level (consistent with leveling.js)
 const LEADERBOARD_LIMIT = 10;
@@ -11,7 +11,7 @@ module.exports = {
 
   async execute(interaction) {
     try {
-      const xpData = getAllUsers();
+      const xpData = getLeaderboardUsers();
       const users = Object.entries(xpData);
 
       if (users.length === 0) {
