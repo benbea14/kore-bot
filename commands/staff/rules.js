@@ -7,6 +7,15 @@ module.exports = {
     .setDefaultMemberPermissions(PermissionFlagsBits.ManageGuild), // <-- Staff-Only
 
   async execute(interaction) {
+    const INTRODUCTION = process.env.INTRODUCTION;
+    const MAIN_CHAT = process.env.MAIN_CHAT;
+    const UPDATES = process.env.UPDATES;
+    const VC_CHANNEL = process.env.VC_CHANNEL;
+
+    const introductionChannel = INTRODUCTION ? `<#${INTRODUCTION}>` : '#introduction';
+    const mainChatChannel = MAIN_CHAT ? `<#${MAIN_CHAT}>` : '#main-chat';
+    const updatesChannel = UPDATES ? `<#${UPDATES}>` : '#updates';
+    const vcChannel = VC_CHANNEL ? `<#${VC_CHANNEL}>` : '#voice-channel';
 
     const rulesEmbed = new EmbedBuilder()
       .setColor(0x9B59B6)
@@ -23,10 +32,10 @@ module.exports = {
         {
           name: '🧐 If you’re new to Discord:',
           value:
-            'Introduce yourself in <#1438183397338910731>\n' +
-            'Chat with everyone in <#1437205534712529046>\n' +
-            'Check <#1437207663548174488> for events\n' +
-            'Join the <#1437800765770039477> during streams or just to talk 💜'
+            `Introduce yourself in ${introductionChannel}\n` +
+            `Chat with everyone in ${mainChatChannel}\n` +
+            `Check ${updatesChannel} for events\n` +
+            `Join the ${vcChannel} during streams or just to talk 💜`
         }
       )
       .setFooter({ text: 'Click the button below to receive the ARMY role 💜' })
