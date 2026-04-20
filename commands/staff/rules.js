@@ -1,10 +1,5 @@
 const { SlashCommandBuilder, EmbedBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle, PermissionFlagsBits } = require('discord.js');
 
-const INTRODUCTION = process.env.INTRODUCTION;
-const MAIN_CHAT = process.env.MAIN_CHAT;
-const UPDATES = process.env.UPDATES;
-const VC_CHANNEL = process.env.VC_CHANNEL;
-
 module.exports = {
   data: new SlashCommandBuilder()
     .setName('rules')
@@ -12,6 +7,13 @@ module.exports = {
     .setDefaultMemberPermissions(PermissionFlagsBits.ManageGuild), // <-- Staff-Only
 
   async execute(interaction) {
+    const INTRODUCTION = process.env.INTRODUCTION;
+    const MAIN_CHAT = process.env.MAIN_CHAT;
+    const UPDATES = process.env.UPDATES;
+    const VC_CHANNEL = process.env.VC_CHANNEL;
+
+    console.log('[rules] env check:', { INTRODUCTION: !!INTRODUCTION, MAIN_CHAT: !!MAIN_CHAT, UPDATES: !!UPDATES, VC_CHANNEL: !!VC_CHANNEL });
+
     // Acknowledge quickly so Discord does not expire the interaction token.
     await interaction.deferReply();
 
