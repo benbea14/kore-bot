@@ -12,11 +12,6 @@ module.exports = {
     const UPDATES = process.env.UPDATES;
     const VC_CHANNEL = process.env.VC_CHANNEL;
 
-    const introductionChannel = INTRODUCTION ? `<#${INTRODUCTION}>` : '#introduction';
-    const mainChatChannel = MAIN_CHAT ? `<#${MAIN_CHAT}>` : '#main-chat';
-    const updatesChannel = UPDATES ? `<#${UPDATES}>` : '#updates';
-    const vcChannel = VC_CHANNEL ? `<#${VC_CHANNEL}>` : '#voice-channel';
-
     const rulesEmbed = new EmbedBuilder()
       .setColor(0x9B59B6)
       .setTitle('Welcome to Purple Hours 💜')
@@ -32,10 +27,10 @@ module.exports = {
         {
           name: '🧐 If you’re new to Discord:',
           value:
-            `Introduce yourself in ${introductionChannel}\n` +
-            `Chat with everyone in ${mainChatChannel}\n` +
-            `Check ${updatesChannel} for events\n` +
-            `Join the ${vcChannel} during streams or just to talk 💜`
+            `Introduce yourself in <#${INTRODUCTION}>\n` +
+            `Chat with everyone in <#${MAIN_CHAT}>\n` +
+            `Check <#${UPDATES}> for events\n` +
+            `Join the <#${VC_CHANNEL}> during streams or just to talk 💜`
         }
       )
       .setFooter({ text: 'Click the button below to receive the ARMY role 💜' })
