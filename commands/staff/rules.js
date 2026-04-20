@@ -1,5 +1,10 @@
 const { SlashCommandBuilder, EmbedBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle, PermissionFlagsBits } = require('discord.js');
 
+const INTRODUCTION = process.env.INTRODUCTION;
+const MAIN_CHAT = process.env.MAIN_CHAT;
+const UPDATES = process.env.UPDATES;
+const VC_CHANNEL = process.env.VC_CHANNEL;
+
 module.exports = {
   data: new SlashCommandBuilder()
     .setName('rules')
@@ -7,10 +12,6 @@ module.exports = {
     .setDefaultMemberPermissions(PermissionFlagsBits.ManageGuild), // <-- Staff-Only
 
   async execute(interaction) {
-    const INTRODUCTION = process.env.INTRODUCTION;
-    const MAIN_CHAT = process.env.MAIN_CHAT;
-    const UPDATES = process.env.UPDATES;
-    const VC_CHANNEL = process.env.VC_CHANNEL;
 
     const rulesEmbed = new EmbedBuilder()
       .setColor(0x9B59B6)
