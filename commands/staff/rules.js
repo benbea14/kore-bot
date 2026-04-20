@@ -7,30 +7,6 @@ module.exports = {
     .setDefaultMemberPermissions(PermissionFlagsBits.ManageGuild), // <-- Staff-Only
 
   async execute(interaction) {
-    const getChannelId = (...keys) => {
-      for (const key of keys) {
-        const raw = process.env[key];
-        if (!raw) continue;
-        const normalized = String(raw).replace(/\D/g, '');
-        if (normalized) return normalized;
-      }
-      return '';
-    };
-
-    const INTRODUCTION = getChannelId('INTRODUCTION', 'INTRODUTION', 'INTRODUCTION_CHANNEL_ID');
-    const MAIN_CHAT = getChannelId('MAIN_CHAT', 'MAINCHAT', 'MAIN_CHAT_ID', 'MAIN_CHANNEL_ID');
-    const UPDATES = getChannelId('UPDATES', 'UPDATES_CHANNEL_ID');
-    const VC_CHANNEL = getChannelId('VC_CHANNEL', 'VC', 'VC_CHANNEL_ID', 'VOICE_CHANNEL_ID');
-
-    const introductionMention = INTRODUCTION ? `<#${INTRODUCTION}>` : '#introduction';
-    const mainChatMention = MAIN_CHAT ? `<#${MAIN_CHAT}>` : '#main-chat';
-    const updatesMention = UPDATES ? `<#${UPDATES}>` : '#updates';
-    const vcMention = VC_CHANNEL ? `<#${VC_CHANNEL}>` : '#voice-channel';
-
-    console.log('[rules] env check:', { INTRODUCTION: !!INTRODUCTION, MAIN_CHAT: !!MAIN_CHAT, UPDATES: !!UPDATES, VC_CHANNEL: !!VC_CHANNEL, runtime: process.env.RAILWAY_ENVIRONMENT ? 'railway' : 'non-railway' });
-
-    // Acknowledge quickly so Discord does not expire the interaction token.
-    await interaction.deferReply();
 
     const rulesEmbed = new EmbedBuilder()
       .setColor(0x9B59B6)
@@ -47,10 +23,10 @@ module.exports = {
         {
           name: '🧐 If you’re new to Discord:',
           value:
-            `Introduce yourself in ${introductionMention}\n` +
-            `Chat with everyone in ${mainChatMention}\n` +
-            `Check ${updatesMention} for events\n` +
-            `Join the ${vcMention} during streams or just to talk 💜`
+            'Introduce yourself in <#1438183397338910731>\n' +
+            'Chat with everyone in <#1494784164438737058>\n' +
+            'Check <#1437207663548174488> for events\n' +
+            'Join the <#1493664751438528512> during streams or just to talk 💜'
         }
       )
       .setFooter({ text: 'Click the button below to receive the ARMY role 💜' })
@@ -63,7 +39,7 @@ module.exports = {
         .setStyle(ButtonStyle.Success)
     );
 
-    await interaction.editReply({
+    await interaction.reply({
       embeds: [rulesEmbed],
       components: [button],
     });
