@@ -7,12 +7,27 @@ module.exports = {
     .setDefaultMemberPermissions(PermissionFlagsBits.ManageGuild), // <-- Staff-Only
 
   async execute(interaction) {
-    const INTRODUCTION = process.env.INTRODUCTION;
-    const MAIN_CHAT = process.env.MAIN_CHAT;
-    const UPDATES = process.env.UPDATES;
-    const VC_CHANNEL = process.env.VC_CHANNEL;
+    const getChannelId = (...keys) => {
+      for (const key of keys) {
+        const raw = process.env[key];
+        if (!raw) continue;
+        const normalized = String(raw).replace(/\D/g, '');
+        if (normalized) return normalized;
+      }
+      return '';
+    };
 
-    console.log('[rules] env check:', { INTRODUCTION: !!INTRODUCTION, MAIN_CHAT: !!MAIN_CHAT, UPDATES: !!UPDATES, VC_CHANNEL: !!VC_CHANNEL });
+    const INTRODUCTION = getChannelId('INTRODUCTION', 'INTRODUTION', 'INTRODUCTION_CHANNEL_ID');
+    const MAIN_CHAT = getChannelId('MAIN_CHAT', 'MAINCHAT', 'MAIN_CHAT_ID', 'MAIN_CHANNEL_ID');
+    const UPDATES = getChannelId('UPDATES', 'UPDATES_CHANNEL_ID');
+    const VC_CHANNEL = getChannelId('VC_CHANNEL', 'VC', 'VC_CHANNEL_ID', 'VOICE_CHANNEL_ID');
+
+    const introductionMention = INTRODUCTION ? `<#${INTRODUCTION}>` : '#introduction';
+    const mainChatMention = MAIN_CHAT ? `<#${MAIN_CHAT}>` : '#main-chat';
+    const updatesMention = UPDATES ? `<#${UPDATES}>` : '#updates';
+    const vcMention = VC_CHANNEL ? `<#${VC_CHANNEL}>` : '#voice-channel';
+
+    console.log('[rules] env check:', { INTRODUCTION: !!INTRODUCTION, MAIN_CHAT: !!MAIN_CHAT, UPDATES: !!UPDATES, VC_CHANNEL: !!VC_CHANNEL, runtime: process.env.RAILWAY_ENVIRONMENT ? 'railway' : 'non-railway' });
 
     // Acknowledge quickly so Discord does not expire the interaction token.
     await interaction.deferReply();
@@ -32,10 +47,10 @@ module.exports = {
         {
           name: '🧐 If you’re new to Discord:',
           value:
-            `Introduce yourself in <#${INTRODUCTION}>\n` +
-            `Chat with everyone in <#${MAIN_CHAT}>\n` +
-            `Check <#${UPDATES}> for events\n` +
-            `Join the <#${VC_CHANNEL}> during streams or just to talk 💜`
+            `Introduce yourself in ${introductionMention}\n` +
+            `Chat with everyone in ${mainChatMention}\n` +
+            `Check ${updatesMention} for events\n` +
+            `Join the ${vcMention} during streams or just to talk 💜`
         }
       )
       .setFooter({ text: 'Click the button below to receive the ARMY role 💜' })
