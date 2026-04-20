@@ -6,7 +6,7 @@ const {
 
 module.exports = {
   data: new SlashCommandBuilder()
-    .setName('biasstats')
+    .setName('biasstat')
     .setDescription('Shows BTS bias role statistics.')
     .setDefaultMemberPermissions(PermissionFlagsBits.ManageGuild), // Staff only
 
@@ -22,20 +22,28 @@ module.exports = {
       { name: '🐰 JK', label: '🐰 JK' }
     ];
 
+    // Ensure member cache is populated so role member counts are accurate.
+    await interaction.guild.members.fetch();
+
+    const resolvedRoles = biasRoles.map(bias => ({
+      ...bias,
+      role: interaction.guild.roles.cache.find(r => r.name === bias.name)
+    }));
+
     let description = '';
     let total = 0;
 
     // Erst Gesamtzahl berechnen
-    for (const bias of biasRoles) {
-      const role = interaction.guild.roles.cache.find(r => r.name === bias.name);
+    for (const bias of resolvedRoles) {
+      const role = bias.role;
       if (role) {
         total += role.members.size;
       }
     }
 
     // Dann einzelne Werte + Prozent
-    for (const bias of biasRoles) {
-      const role = interaction.guild.roles.cache.find(r => r.name === bias.name);
+    for (const bias of resolvedRoles) {
+      const role = bias.role;
 
       if (!role) {
         description += `${bias.label} — Role not found\n`;
