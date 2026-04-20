@@ -20,14 +20,6 @@ module.exports = {
         { name: '4️⃣ Safe for everyone', value: 'No NSFW, offensive jokes or heavy topics. This is a calm soft space.' },
         { name: '5️⃣ English preferred', value: 'To help everyone feel included, please keep main chats mostly in English.' },
         { name: '6️⃣ During watch parties', value: 'Mute if you’re not talking and keep the vibes relaxed & have fun 🍿' },
-        {
-          name: '🧐 If you’re new to Discord:',
-          value:
-            'Introduce yourself in <#1438183397338910731>\n' +
-            'Chat with everyone in <#1494784164438737058>\n' +
-            'Check <#1437207663548174488> for events\n' +
-            'Join the <#1493664751438528512> during streams or just to talk 💜'
-        }
       )
       .setFooter({ text: 'Click the button below to receive the ARMY role 💜' })
       .setTimestamp();
