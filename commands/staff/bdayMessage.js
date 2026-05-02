@@ -466,7 +466,7 @@ module.exports = {
                     .setFooter({ text: `Total images: ${images.length}` })
                     .setTimestamp();
 
-                return interaction.reply({ embeds: [embed], flags: 64 });
+                return interaction.reply({ embeds: [embed] });
             }
 
             // IMAGE-REMOVE (remove birthday image by index)
