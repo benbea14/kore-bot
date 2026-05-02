@@ -137,6 +137,40 @@ module.exports = {
                             { name: 'Event', value: 'event' }
                         )
                 )
+        )
+
+        // IMAGE-ADD
+        .addSubcommand(sub =>
+            sub.setName('image-add')
+                .setDescription('Add an image for birthday messages')
+                .addAttachmentOption(opt =>
+                    opt.setName('image')
+                        .setDescription('Upload an image file')
+                        .setRequired(false)
+                )
+                .addStringOption(opt =>
+                    opt.setName('url')
+                        .setDescription('Direct image URL (https://...)')
+                        .setRequired(false)
+                )
+        )
+
+        // IMAGE-LIST
+        .addSubcommand(sub =>
+            sub.setName('image-list')
+                .setDescription('List all birthday message images')
+        )
+
+        // IMAGE-REMOVE
+        .addSubcommand(sub =>
+            sub.setName('image-remove')
+                .setDescription('Remove a birthday message image by index')
+                .addIntegerOption(opt =>
+                    opt.setName('index')
+                        .setDescription('Image number from /message image-list')
+                        .setRequired(true)
+                        .setMinValue(1)
+                )
         ),
 
     async execute(interaction) {
@@ -341,6 +375,129 @@ module.exports = {
                 fields.forEach(field => embed.addFields(field));
 
                 return interaction.reply({ embeds: [embed] });
+            }
+
+            // IMAGE-ADD (add image to birthday message image pool)
+            if (sub === 'image-add') {
+
+                const imageAttachment = interaction.options.getAttachment('image');
+                const imageUrl = interaction.options.getString('url');
+
+                if (!imageAttachment && !imageUrl) {
+                    return interaction.reply({
+                        content: '❌ Please provide either an uploaded image or an image URL.',
+                        flags: 64
+                    });
+                }
+
+                const candidateUrl = imageAttachment?.url || imageUrl?.trim();
+
+                let parsed;
+                try {
+                    parsed = new URL(candidateUrl);
+                } catch {
+                    return interaction.reply({
+                        content: '❌ Invalid URL. Please use a direct http(s) image URL.',
+                        flags: 64
+                    });
+                }
+
+                if (!['http:', 'https:'].includes(parsed.protocol)) {
+                    return interaction.reply({
+                        content: '❌ URL must start with http:// or https://',
+                        flags: 64
+                    });
+                }
+
+                if (imageAttachment?.contentType && !imageAttachment.contentType.startsWith('image/')) {
+                    return interaction.reply({
+                        content: '❌ The uploaded file is not an image.',
+                        flags: 64
+                    });
+                }
+
+                if (!data.messages.birthday) {
+                    data.messages.birthday = {
+                        template: '🎂 Happy Birthday {name}! 💜',
+                        useEmbed: true
+                    };
+                }
+
+                if (!Array.isArray(data.messages.birthday.images)) {
+                    data.messages.birthday.images = [];
+                }
+
+                if (data.messages.birthday.images.includes(candidateUrl)) {
+                    return interaction.reply({
+                        content: '⚠️ This image is already in the birthday image list.',
+                        flags: 64
+                    });
+                }
+
+                data.messages.birthday.images.push(candidateUrl);
+                bdayService.saveData(data);
+
+                return interaction.reply({
+                    content: `✅ Birthday image added. Total images: **${data.messages.birthday.images.length}**`,
+                    flags: 64
+                });
+            }
+
+            // IMAGE-LIST (list all birthday images)
+            if (sub === 'image-list') {
+
+                const images = data.messages?.birthday?.images || [];
+
+                if (images.length === 0) {
+                    return interaction.reply({
+                        content: '❌ No birthday images configured yet.',
+                        flags: 64
+                    });
+                }
+
+                const list = images
+                    .map((url, index) => `${index + 1}. ${url}`)
+                    .join('\n');
+
+                const embed = new EmbedBuilder()
+                    .setColor(0x9B59B6)
+                    .setTitle('Birthday Message Images')
+                    .setDescription(list.length > 4000 ? `${list.slice(0, 3950)}\n...` : list)
+                    .setFooter({ text: `Total images: ${images.length}` })
+                    .setTimestamp();
+
+                return interaction.reply({ embeds: [embed], flags: 64 });
+            }
+
+            // IMAGE-REMOVE (remove birthday image by index)
+            if (sub === 'image-remove') {
+
+                const index = interaction.options.getInteger('index');
+                const images = data.messages?.birthday?.images || [];
+
+                if (images.length === 0) {
+                    return interaction.reply({
+                        content: '❌ No birthday images configured.',
+                        flags: 64
+                    });
+                }
+
+                if (index < 1 || index > images.length) {
+                    return interaction.reply({
+                        content: `❌ Invalid index. Please choose a number between 1 and ${images.length}.`,
+                        flags: 64
+                    });
+                }
+
+                const removed = images.splice(index - 1, 1)[0];
+
+                data.messages.birthday.images = images;
+                bdayService.saveData(data);
+
+                return interaction.reply({
+                    content: `✅ Removed image #${index}: ${removed}`,
+                    flags: 64
+                });
             }
 
         }
