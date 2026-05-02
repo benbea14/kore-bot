@@ -11,37 +11,6 @@ function formatTemplate(template, data) {
         .replace(/{server}/g, data.server ?? "");
 }
 
-// RANDOM IMAGE
-function getRandomImage(images) {
-    if (!Array.isArray(images)) return null;
-
-    const validImages = images
-        .filter(image => typeof image === 'string')
-        .map(image => image.trim().replace(/^<(.+)>$/, '$1'))
-        .filter(Boolean)
-        .filter(image => {
-            try {
-                const parsed = new URL(image);
-                return parsed.protocol === 'http:' || parsed.protocol === 'https:';
-            } catch (_) {
-                return false;
-            }
-        })
-        .filter(Boolean);
-
-    if (validImages.length === 0) return null;
-    return validImages[Math.floor(Math.random() * validImages.length)];
-}
-
-function pickImage(...imageLists) {
-    for (const imageList of imageLists) {
-        const picked = getRandomImage(imageList);
-        if (picked) return picked;
-    }
-
-    return null;
-}
-
 // SEND BIRTHDAY
 async function sendBirthdayMessage(client, entry, previewChannel = null) {
 
@@ -81,13 +50,10 @@ async function sendBirthdayMessage(client, entry, previewChannel = null) {
 
     // CHECK FOR USER-SPECIFIC MESSAGE
     let template = data.messages.birthday.template;
-    let userImageKey = null;
     if (entry.type === "user" && data.messages?.birthday?.userMessages?.[entry.userId]) {
         template = data.messages.birthday.userMessages[entry.userId];
-        userImageKey = entry.userId;
     } else if (entry.type === "name" && data.messages?.birthday?.userMessages?.[entry.name]) {
         template = data.messages.birthday.userMessages[entry.name];
-        userImageKey = entry.name;
     }
 
     const messageContent = formatTemplate(template, {
@@ -98,12 +64,10 @@ async function sendBirthdayMessage(client, entry, previewChannel = null) {
         server: channel.guild.name ?? ""
     });
 
-    // Get user-specific images if available, otherwise use global images
-    const randomImage = pickImage(
-        userImageKey ? data.messages?.birthday?.userImages?.[userImageKey] : null,
-        data.messages?.birthday?.images,
-        entry.images
-    );
+    const imagePool = data.messages?.birthday?.images || [];
+    const randomImage = imagePool.length > 0
+        ? imagePool[Math.floor(Math.random() * imagePool.length)]
+        : null;
 
     if (useEmbed) {
 
@@ -111,16 +75,19 @@ async function sendBirthdayMessage(client, entry, previewChannel = null) {
             .setColor(0x9B59B6)
             .setDescription(messageContent);
 
-        if (randomImage) embed.setImage(randomImage);
+        if (randomImage) {
+            embed.setImage(randomImage);
+        }
 
         await channel.send({ embeds: [embed] });
 
     } else {
 
-        await channel.send({
-            content: messageContent,
-            files: randomImage ? [randomImage] : []
-        });
+        const content = randomImage
+            ? `${messageContent}\n${randomImage}`
+            : messageContent;
+
+        await channel.send({ content });
     }
 }
 
@@ -155,29 +122,17 @@ async function sendEventMessage(client, event, previewChannel = null) {
         server: channel.guild.name ?? ""
     });
 
-    // Get event-specific images if available, otherwise use global images
-    const randomImage = pickImage(
-        data.messages?.event?.userImages?.[event.name],
-        data.messages?.event?.images,
-        event.images
-    );
-
     if (useEmbed) {
 
         const embed = new EmbedBuilder()
             .setColor(0x5865F2)
             .setDescription(messageContent);
 
-        if (randomImage) embed.setImage(randomImage);
-
         await channel.send({ embeds: [embed] });
 
     } else {
 
-        await channel.send({
-            content: messageContent,
-            files: randomImage ? [randomImage] : []
-        });
+        await channel.send({ content: messageContent });
     }
 }
 
@@ -204,24 +159,17 @@ async function sendServerMessage(client, previewChannel = null) {
         server: channel.guild.name ?? ""
     });
 
-    const randomImage = pickImage(data.messages?.server?.images);
-
     if (useEmbed) {
 
         const embed = new EmbedBuilder()
             .setColor(0x9B59B6)
             .setDescription(messageContent);
 
-        if (randomImage) embed.setImage(randomImage);
-
         await channel.send({ embeds: [embed] });
 
     } else {
 
-        await channel.send({
-            content: messageContent,
-            files: randomImage ? [randomImage] : []
-        });
+        await channel.send({ content: messageContent });
     }
 }
 
