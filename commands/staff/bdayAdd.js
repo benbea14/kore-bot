@@ -151,8 +151,7 @@ module.exports = {
                     day,
                     month,
                     year,
-                    recurring: true,
-                    images: []
+                    recurring: true
                 };
 
                 bdayService.saveData(data);
