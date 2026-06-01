@@ -1,5 +1,37 @@
-const { EmbedBuilder } = require('discord.js');
+const { EmbedBuilder, AttachmentBuilder } = require('discord.js');
+const fs = require('node:fs');
+const path = require('node:path');
 const bdayService = require('./bdayService');
+
+const LOCAL_IMAGE_PREFIX = 'local:';
+const VOLUME_DATA_DIR = '/data';
+const FALLBACK_DATA_DIR = path.join(__dirname, '..', 'data');
+const LOCAL_IMAGE_DIR = path.join(
+    fs.existsSync(VOLUME_DATA_DIR) ? VOLUME_DATA_DIR : FALLBACK_DATA_DIR,
+    'bday-images'
+);
+
+function resolveBirthdayImageAsset(imageRef) {
+    if (!imageRef || typeof imageRef !== 'string') {
+        return null;
+    }
+
+    if (!imageRef.startsWith(LOCAL_IMAGE_PREFIX)) {
+        return { remoteUrl: imageRef };
+    }
+
+    const fileName = imageRef.slice(LOCAL_IMAGE_PREFIX.length);
+    const absolutePath = path.join(LOCAL_IMAGE_DIR, fileName);
+
+    if (!fs.existsSync(absolutePath)) {
+        return null;
+    }
+
+    return {
+        fileName,
+        file: new AttachmentBuilder(absolutePath, { name: fileName })
+    };
+}
 
 // PLACEHOLDER SYSTEM
 function formatTemplate(template, data) {
@@ -68,6 +100,7 @@ async function sendBirthdayMessage(client, entry, previewChannel = null) {
     const randomImage = imagePool.length > 0
         ? imagePool[Math.floor(Math.random() * imagePool.length)]
         : null;
+    const imageAsset = resolveBirthdayImageAsset(randomImage);
 
     if (useEmbed) {
 
@@ -75,16 +108,29 @@ async function sendBirthdayMessage(client, entry, previewChannel = null) {
             .setColor(0x9B59B6)
             .setDescription(messageContent);
 
-        if (randomImage) {
-            embed.setImage(randomImage);
+        if (imageAsset?.remoteUrl) {
+            embed.setImage(imageAsset.remoteUrl);
+            await channel.send({ embeds: [embed] });
+            return;
+        }
+
+        if (imageAsset?.file) {
+            embed.setImage(`attachment://${imageAsset.fileName}`);
+            await channel.send({ embeds: [embed], files: [imageAsset.file] });
+            return;
         }
 
         await channel.send({ embeds: [embed] });
 
     } else {
 
-        const content = randomImage
-            ? `${messageContent}\n${randomImage}`
+        if (imageAsset?.file) {
+            await channel.send({ content: messageContent, files: [imageAsset.file] });
+            return;
+        }
+
+        const content = imageAsset?.remoteUrl
+            ? `${messageContent}\n${imageAsset.remoteUrl}`
             : messageContent;
 
         await channel.send({ content });

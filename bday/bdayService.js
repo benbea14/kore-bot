@@ -35,6 +35,13 @@ function saveData(data) {
     fs.writeFileSync(dataPath, JSON.stringify(data, null, 2));
 }
 
+function normalizeName(value) {
+    return (value || '')
+        .trim()
+        .replace(/\s*\(left\)\s*$/i, '')
+        .toLowerCase();
+}
+
 // ADD BIRTHDAY
 function addBirthday({ type, userId = null, name = null, displayName = null, day, month, year = null }) {
 
@@ -48,8 +55,7 @@ function addBirthday({ type, userId = null, name = null, displayName = null, day
         day,
         month,
         year,
-        recurring: true,
-        images: []
+        recurring: true
     };
 
     data.birthdays.push(newEntry);
@@ -73,10 +79,26 @@ function removeBirthday({ type, userId = null, name = null, displayName = null }
                 !b.displayName
             ));
         } else {
-            data.birthdays = data.birthdays.filter(b => !(b.type === 'name' && b.name === name));
+            const targetName = normalizeName(name);
+
+            data.birthdays = data.birthdays.filter((b) => {
+                if (b.type === 'name') {
+                    return normalizeName(b.name) !== targetName;
+                }
+
+                if (b.type === 'user') {
+                    return normalizeName(b.displayName) !== targetName;
+                }
+
+                return true;
+            });
         }
     } else if (type === 'displayName' && displayName) {
-        data.birthdays = data.birthdays.filter(b => !(b.type === 'user' && b.displayName === displayName && !b.name));
+        const targetDisplayName = normalizeName(displayName);
+
+        data.birthdays = data.birthdays.filter(
+            b => !(b.type === 'user' && normalizeName(b.displayName) === targetDisplayName && !b.name)
+        );
     }
 
     saveData(data);
@@ -93,8 +115,7 @@ function addEvent({ name, day, month, year, recurring = false }) {
         day,
         month,
         year,
-        recurring,
-        images: []
+        recurring
     };
 
     data.events.push(newEvent);

@@ -1,6 +1,35 @@
 const { SlashCommandBuilder, PermissionFlagsBits, EmbedBuilder } = require('discord.js');
+const fs = require('node:fs');
+const path = require('node:path');
 const bdayService = require('../../bday/bdayService');
 const { sendBirthdayMessage, sendEventMessage, sendServerMessage } = require('../../bday/bdayMessages');
+
+const LOCAL_IMAGE_PREFIX = 'local:';
+const VOLUME_DATA_DIR = '/data';
+const FALLBACK_DATA_DIR = path.join(__dirname, '..', '..', 'data');
+const LOCAL_IMAGE_DIR = path.join(
+    fs.existsSync(VOLUME_DATA_DIR) ? VOLUME_DATA_DIR : FALLBACK_DATA_DIR,
+    'bday-images'
+);
+
+function ensureLocalImageDir() {
+    if (!fs.existsSync(LOCAL_IMAGE_DIR)) {
+        fs.mkdirSync(LOCAL_IMAGE_DIR, { recursive: true });
+    }
+}
+
+function getFileExtension(imageAttachment) {
+    const fromName = path.extname(imageAttachment?.name || '').toLowerCase();
+    if (fromName) return fromName;
+
+    const contentType = (imageAttachment?.contentType || '').toLowerCase();
+    if (contentType === 'image/jpeg') return '.jpg';
+    if (contentType === 'image/png') return '.png';
+    if (contentType === 'image/gif') return '.gif';
+    if (contentType === 'image/webp') return '.webp';
+
+    return '.png';
+}
 
 module.exports = {
     data: new SlashCommandBuilder()
@@ -136,6 +165,12 @@ module.exports = {
                             { name: 'Birthday', value: 'birthday' },
                             { name: 'Event', value: 'event' }
                         )
+                )
+                .addIntegerOption(opt =>
+                    opt.setName('page')
+                        .setDescription('Page number (10 entries per page)')
+                        .setRequired(false)
+                        .setMinValue(1)
                 )
         )
 
@@ -337,6 +372,8 @@ module.exports = {
             if (sub === 'user-list') {
 
                 const userMessages = data.messages[type]?.userMessages;
+                const page = interaction.options.getInteger('page') || 1;
+                const pageSize = 10;
 
                 if (!userMessages || Object.keys(userMessages).length === 0) {
                     return interaction.reply({
@@ -345,13 +382,27 @@ module.exports = {
                     });
                 }
 
+                const allEntries = Object.entries(userMessages);
+                const totalPages = Math.max(1, Math.ceil(allEntries.length / pageSize));
+
+                if (page > totalPages) {
+                    return interaction.reply({
+                        content: `❌ Invalid page. Please choose a page between 1 and ${totalPages}.`,
+                        flags: 64
+                    });
+                }
+
+                const start = (page - 1) * pageSize;
+                const pagedEntries = allEntries.slice(start, start + pageSize);
+
                 const embed = new EmbedBuilder()
                     .setTitle(`Personal Messages - ${type}`)
                     .setColor(0x9B59B6)
+                    .setFooter({ text: `Page ${page}/${totalPages} • Total: ${allEntries.length}` })
                     .setTimestamp();
 
                 // Fetch user nicknames for display
-                const promises = Object.entries(userMessages).map(async ([target, tmpl]) => {
+                const promises = pagedEntries.map(async ([target, tmpl]) => {
                     let displayName = target;
                     
                     // If target looks like a user ID (numeric), fetch the user to get their username
@@ -390,7 +441,7 @@ module.exports = {
                     });
                 }
 
-                const candidateUrl = imageAttachment?.url || imageUrl?.trim();
+                let candidateUrl = imageAttachment?.url || imageUrl?.trim();
 
                 let parsed;
                 try {
@@ -414,6 +465,28 @@ module.exports = {
                         content: '❌ The uploaded file is not an image.',
                         flags: 64
                     });
+                }
+
+                if (imageAttachment) {
+                    ensureLocalImageDir();
+
+                    const response = await fetch(candidateUrl);
+                    if (!response.ok) {
+                        return interaction.reply({
+                            content: '❌ Could not download the uploaded image from Discord. Please try again.',
+                            flags: 64
+                        });
+                    }
+
+                    const extension = getFileExtension(imageAttachment);
+                    const fileName = `bday_${Date.now()}_${Math.random().toString(16).slice(2)}${extension}`;
+                    const filePath = path.join(LOCAL_IMAGE_DIR, fileName);
+                    const buffer = Buffer.from(await response.arrayBuffer());
+
+                    fs.writeFileSync(filePath, buffer);
+
+                    // Store local images as `local:filename.ext` so they survive attachment URL expiry.
+                    candidateUrl = `${LOCAL_IMAGE_PREFIX}${fileName}`;
                 }
 
                 if (!data.messages.birthday) {
@@ -456,7 +529,13 @@ module.exports = {
                 }
 
                 const list = images
-                    .map((url, index) => `${index + 1}. ${url}`)
+                    .map((url, index) => {
+                        if (typeof url === 'string' && url.startsWith(LOCAL_IMAGE_PREFIX)) {
+                            return `${index + 1}. [local file] ${url.slice(LOCAL_IMAGE_PREFIX.length)}`;
+                        }
+
+                        return `${index + 1}. ${url}`;
+                    })
                     .join('\n');
 
                 const embed = new EmbedBuilder()
@@ -490,6 +569,15 @@ module.exports = {
                 }
 
                 const removed = images.splice(index - 1, 1)[0];
+
+                if (typeof removed === 'string' && removed.startsWith(LOCAL_IMAGE_PREFIX)) {
+                    const localName = removed.slice(LOCAL_IMAGE_PREFIX.length);
+                    const localPath = path.join(LOCAL_IMAGE_DIR, localName);
+
+                    if (fs.existsSync(localPath)) {
+                        fs.unlinkSync(localPath);
+                    }
+                }
 
                 data.messages.birthday.images = images;
                 bdayService.saveData(data);
