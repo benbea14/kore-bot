@@ -23,6 +23,7 @@ const XP_PER_MESSAGE = [10, 20];
 const LEVEL_MULTIPLIER = 100;
 
 const cooldowns = new Map();
+const XP_VERBOSE_LOGS = process.env.XP_VERBOSE_LOGS === 'true';
 
 function setXPPaused(state) {
   xpPaused = state;
@@ -158,7 +159,9 @@ async function updateNickname(member, level) {
 
     await member.setNickname(newNick);
   } catch (error) {
-    console.warn(`Couldn't set nickname for ${member.user?.tag || 'unknown'}: ${error.message}`);
+    if (XP_VERBOSE_LOGS) {
+      console.warn(`Couldn't set nickname for ${member.user?.tag || 'unknown'}: ${error.message}`);
+    }
   }
 }
 
@@ -326,6 +329,11 @@ function getAllUsers() {
   return { ...xpData };
 }
 
+function hasStoredUser(userId) {
+  if (!userId) return false;
+  return Object.prototype.hasOwnProperty.call(xpData, userId);
+}
+
 // Export functions
 module.exports = {
   handleMessage,
@@ -337,6 +345,7 @@ module.exports = {
   addXP,
   resetUser,
   getAllUsers,
+  hasStoredUser,
   getLeaderboardUsers,
   isUserExcluded,
   setUserExcluded,

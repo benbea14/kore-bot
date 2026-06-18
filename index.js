@@ -2,7 +2,7 @@ const fs = require('node:fs');
 const path = require('node:path');
 const http = require('node:http');
 const countingGame = require('./game/CountingGame');
-const { handleMessage, updateNickname, getLevelData } = require('./XP/leveling');
+const { handleMessage, updateNickname, getLevelData, resetUser, hasStoredUser } = require('./XP/leveling');
 const { createBackup } = require('./commands/admin/xpBackup');
 const { startScheduler } = require('./bday/bdayScheduler');
 const { startDailyScheduler } = require('./daily/dailyScheduler');
@@ -11,6 +11,8 @@ const { handleMessageTrigger } = require('./triggers/triggerHandler');
 const LOG_WINDOW_MS = Number(process.env.LOG_WINDOW_MS ?? 60_000);
 const LOG_MAX_PER_KEY = Number(process.env.LOG_MAX_PER_KEY ?? 10);
 const LOG_SUMMARY_EVERY_MS = Number(process.env.LOG_SUMMARY_EVERY_MS ?? 15_000);
+const XP_DELETE_ON_LEAVE = process.env.XP_DELETE_ON_LEAVE === 'true';
+const XP_LOG_MEMBER_LEAVE = process.env.XP_LOG_MEMBER_LEAVE === 'true';
 
 const originalConsoleError = console.error.bind(console);
 const errorRateState = new Map();
@@ -280,6 +282,30 @@ client.on(Events.GuildMemberAdd, async member => {
       files: [new AttachmentBuilder(welcomeImage)] });
   } catch {
     console.log(`Could not DM ${member.user.tag}`);
+  }
+});
+
+client.on(Events.GuildMemberRemove, member => {
+  try {
+    const hadXPData = hasStoredUser(member.id);
+
+    if (!hadXPData) {
+      return;
+    }
+
+    if (XP_DELETE_ON_LEAVE) {
+      resetUser(member.id);
+      if (XP_LOG_MEMBER_LEAVE) {
+        console.log(`[XP] Member left, XP data deleted for ${member.user?.tag || member.id} (${member.id}).`);
+      }
+      return;
+    }
+
+    if (XP_LOG_MEMBER_LEAVE) {
+      console.log(`[XP] Member left, XP data kept for ${member.user?.tag || member.id} (${member.id}).`);
+    }
+  } catch (error) {
+    console.error('GuildMemberRemove XP handling error:', error);
   }
 });
 
