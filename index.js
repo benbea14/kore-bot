@@ -33,21 +33,31 @@ function getLogCallsite() {
     return null;
   }
 
-  const stack = new Error().stack;
-  if (!stack) {
-    return null;
+  try {
+    const stack = new Error().stack || '';
+    const lines = stack.split('\n');
+
+    // Skip the first few lines (Error, getLogCallsite itself, sanitizeLogArg, sanitizeLogArgs, sanitizedConsoleLog)
+    for (let i = 2; i < lines.length; i++) {
+      const line = lines[i].trim();
+
+      // Skip logging internals
+      if (line.includes('index.js:') && !line.includes('at new Error')) {
+        // Extract file:line from the stack trace
+        const match = line.match(/\(([^)]+)\)|at ([^\s]+)/);
+        if (match) {
+          const location = match[1] || match[2];
+          if (location && !location.includes('internal/')) {
+            return location;
+          }
+        }
+      }
+    }
+  } catch {
+    // Silently fail if stack inspection errors
   }
 
-  const lines = stack.split('\n').map(line => line.trim());
-  const appLine = lines.find(line =>
-    line.includes('Kora') &&
-    !line.includes('sanitizeLogArg') &&
-    !line.includes('sanitizeLogArgs') &&
-    !line.includes('sanitizedConsoleLog') &&
-    !line.includes('rateLimitedConsoleError')
-  );
-
-  return appLine ?? null;
+  return null;
 }
 
 function sanitizeLogArg(arg) {
