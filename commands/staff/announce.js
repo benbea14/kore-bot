@@ -5,9 +5,85 @@ const {
   EmbedBuilder,
   ModalBuilder,
   ActionRowBuilder,
+  ButtonBuilder,
+  ButtonStyle,
   TextInputBuilder,
   TextInputStyle
 } = require('discord.js');
+
+const BUTTON_STYLE_MAP = {
+  primary: ButtonStyle.Primary,
+  secondary: ButtonStyle.Secondary,
+  success: ButtonStyle.Success,
+  danger: ButtonStyle.Danger
+};
+
+function parseRoleReference(guild, rawRole) {
+  const trimmedRole = rawRole.trim();
+  const roleId = trimmedRole.match(/^<@&(\d+)>$/)?.[1] || (trimmedRole.match(/^\d+$/)?.[0] ?? null);
+
+  if (roleId) {
+    return guild.roles.cache.get(roleId) ?? null;
+  }
+
+  return guild.roles.cache.find(role => role.name.toLowerCase() === trimmedRole.toLowerCase()) ?? null;
+}
+
+function buildRoleButtonRows(guild, rawButtonConfig) {
+  if (!rawButtonConfig?.trim()) {
+    return [];
+  }
+
+  const lines = rawButtonConfig
+    .split('\n')
+    .map(line => line.trim())
+    .filter(Boolean);
+
+  if (lines.length > 25) {
+    throw new Error('You can add at most 25 role buttons at once.');
+  }
+
+  const buttons = lines.map((line, index) => {
+    const parts = line.split('|').map(part => part.trim());
+
+    if (parts.length < 2 || parts.length > 3) {
+      throw new Error(`Line ${index + 1} must use: Label | Role | Style(optional)`);
+    }
+
+    const [label, rawRole, rawStyle] = parts;
+    if (!label) {
+      throw new Error(`Line ${index + 1} is missing a button label.`);
+    }
+
+    if (label.length > 80) {
+      throw new Error(`Line ${index + 1} label is too long. Discord buttons allow up to 80 characters.`);
+    }
+
+    const role = parseRoleReference(guild, rawRole);
+    if (!role) {
+      throw new Error(`Line ${index + 1} could not find the role "${rawRole}".`);
+    }
+
+    const styleKey = (rawStyle || 'primary').toLowerCase();
+    const style = BUTTON_STYLE_MAP[styleKey];
+
+    if (!style) {
+      throw new Error(`Line ${index + 1} has invalid style "${rawStyle}". Use primary, secondary, success, or danger.`);
+    }
+
+    return new ButtonBuilder()
+      .setCustomId(`announce_role:${role.id}`)
+      .setLabel(label)
+      .setStyle(style);
+  });
+
+  const rows = [];
+  for (let index = 0; index < buttons.length; index += 5) {
+    rows.push(new ActionRowBuilder().addComponents(buttons.slice(index, index + 5)));
+  }
+
+  return rows;
+}
 
 module.exports = {
   data: new SlashCommandBuilder()
@@ -66,9 +142,18 @@ module.exports = {
         .setRequired(true)
         .setMaxLength(4000);
 
+      const buttonsInput = new TextInputBuilder()
+        .setCustomId('announce_buttons')
+        .setLabel('Role buttons: Label | Role | Style(optional)')
+        .setStyle(TextInputStyle.Paragraph)
+        .setRequired(false)
+        .setMaxLength(4000)
+        .setPlaceholder('RM 🐨 | 🐨 RM | primary\n💜 I agree | ARMY | success');
+
       modal.addComponents(
         new ActionRowBuilder().addComponents(titleInput),
-        new ActionRowBuilder().addComponents(textInput)
+        new ActionRowBuilder().addComponents(textInput),
+        new ActionRowBuilder().addComponents(buttonsInput)
       );
 
       await interaction.showModal(modal);
@@ -80,6 +165,8 @@ module.exports = {
 
       const title = submitted.fields.getTextInputValue('announce_title')?.trim();
       const text = submitted.fields.getTextInputValue('announce_text');
+      const rawButtonConfig = submitted.fields.getTextInputValue('announce_buttons');
+      const buttonRows = buildRoleButtonRows(interaction.guild, rawButtonConfig);
 
       if (useEmbed) {
         const embed = new EmbedBuilder()
@@ -91,14 +178,14 @@ module.exports = {
           embed.setTitle(title);
         }
 
-        await channel.send({ embeds: [embed] });
+        await channel.send({ embeds: [embed], components: buttonRows });
       } else {
         const content = title ? `**${title}**\n${text}` : text;
-        await channel.send({ content });
+        await channel.send({ content, components: buttonRows });
       }
 
       return submitted.reply({
-        content: `✅ Announcement sent to ${channel}${useEmbed ? ' as an embed' : ''}.`,
+        content: `✅ Announcement sent to ${channel}${useEmbed ? ' as an embed' : ''}${buttonRows.length ? ' with role buttons' : ''}.`,
         flags: 64
       });
     } catch (error) {
