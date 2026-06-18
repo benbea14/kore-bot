@@ -215,17 +215,6 @@ process.on('SIGINT', () => {
   shutdown('SIGINT');
 });
 
-const LEGACY_ROLE_BUTTONS = {
-  accept_rules: process.env.RULES_ROLE_ID,
-  role_rm: '🐨 RM',
-  role_jin: '🐹 Jin',
-  role_suga: '🐱 Suga',
-  role_jhope: '🐿 J-Hope',
-  role_jimin: '🐥 Jimin',
-  role_v: '🐻 V',
-  role_jk: '🐰 JK'
-};
-
 function getRoleFromButton(interaction) {
   const { customId, guild } = interaction;
 
@@ -234,16 +223,7 @@ function getRoleFromButton(interaction) {
     return guild.roles.cache.get(roleId) ?? null;
   }
 
-  if (customId === 'accept_rules') {
-    return guild.roles.cache.get(LEGACY_ROLE_BUTTONS.accept_rules) ?? null;
-  }
-
-  const roleName = LEGACY_ROLE_BUTTONS[customId];
-  if (!roleName) {
-    return null;
-  }
-
-  return guild.roles.cache.find(role => role.name === roleName) ?? null;
+  return null;
 }
 
 // ================= COMMAND HANDLER =================
