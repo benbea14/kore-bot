@@ -36,35 +36,21 @@ function getLogCallsite() {
   try {
     const stack = new Error().stack || '';
     const lines = stack.split('\n');
-    const skipFunctions = new Set([
-      'getLogCallsite',
-      'sanitizeLogArg',
-      'sanitizeLogArgs',
-      'sanitizedConsoleLog',
-      'rateLimitedConsoleError'
-    ]);
 
     for (let i = 1; i < lines.length; i++) {
       const line = lines[i].trim();
       
-      // Check if this line is a known logging function
-      let isLoggingInternal = false;
-      for (const func of skipFunctions) {
-        if (line.includes(`at ${func}`)) {
-          isLoggingInternal = true;
-          break;
-        }
-      }
-      
-      if (isLoggingInternal) {
-        continue; // Skip this line, it's part of the logging system
+      // Skip any frames that are in index.js (logging infrastructure)
+      // and look for the first external file
+      if (line.includes('index.js')) {
+        continue; // Skip - this is part of the logging system itself
       }
 
       // Extract location from parentheses (e.g., "/path/to/file.js:line:col")
-      const match = line.match(/\(([^)]+)\)/);
+      const match = line.match(/\(([^)]+\.js:[0-9]+:[0-9]+)\)/);
       if (match) {
         const location = match[1];
-        if (location && !location.includes('internal/') && location.includes('.js')) {
+        if (location && !location.includes('internal/')) {
           return location;
         }
       }
