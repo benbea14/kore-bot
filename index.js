@@ -36,20 +36,36 @@ function getLogCallsite() {
   try {
     const stack = new Error().stack || '';
     const lines = stack.split('\n');
+    const skipFunctions = new Set([
+      'getLogCallsite',
+      'sanitizeLogArg',
+      'sanitizeLogArgs',
+      'sanitizedConsoleLog',
+      'rateLimitedConsoleError'
+    ]);
 
-    // Skip the first few lines (Error, getLogCallsite itself, sanitizeLogArg, sanitizeLogArgs, sanitizedConsoleLog)
-    for (let i = 2; i < lines.length; i++) {
+    for (let i = 1; i < lines.length; i++) {
       const line = lines[i].trim();
+      
+      // Check if this line is a known logging function
+      let isLoggingInternal = false;
+      for (const func of skipFunctions) {
+        if (line.includes(`at ${func}`)) {
+          isLoggingInternal = true;
+          break;
+        }
+      }
+      
+      if (isLoggingInternal) {
+        continue; // Skip this line, it's part of the logging system
+      }
 
-      // Skip logging internals
-      if (line.includes('index.js:') && !line.includes('at new Error')) {
-        // Extract file:line from the stack trace
-        const match = line.match(/\(([^)]+)\)|at ([^\s]+)/);
-        if (match) {
-          const location = match[1] || match[2];
-          if (location && !location.includes('internal/')) {
-            return location;
-          }
+      // Extract location from parentheses (e.g., "/path/to/file.js:line:col")
+      const match = line.match(/\(([^)]+)\)/);
+      if (match) {
+        const location = match[1];
+        if (location && !location.includes('internal/') && location.includes('.js')) {
+          return location;
         }
       }
     }
