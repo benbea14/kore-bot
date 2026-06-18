@@ -1,21 +1,75 @@
 const fs = require('node:fs');
 const path = require('node:path');
 const http = require('node:http');
-const countingGame = require('./game/CountingGame');
-const { handleMessage, updateNickname, getLevelData, resetUser, hasStoredUser } = require('./XP/leveling');
-const { createBackup } = require('./commands/admin/xpBackup');
-const { startScheduler } = require('./bday/bdayScheduler');
-const { startDailyScheduler } = require('./daily/dailyScheduler');
-const { handleMessageTrigger } = require('./triggers/triggerHandler');
 
 const LOG_WINDOW_MS = Number(process.env.LOG_WINDOW_MS ?? 60_000);
 const LOG_MAX_PER_KEY = Number(process.env.LOG_MAX_PER_KEY ?? 10);
 const LOG_SUMMARY_EVERY_MS = Number(process.env.LOG_SUMMARY_EVERY_MS ?? 15_000);
 const XP_DELETE_ON_LEAVE = process.env.XP_DELETE_ON_LEAVE === 'true';
 const XP_LOG_MEMBER_LEAVE = process.env.XP_LOG_MEMBER_LEAVE === 'true';
+const LOG_SUPPRESS_LARGE_OBJECTS = process.env.LOG_SUPPRESS_LARGE_OBJECTS !== 'false';
+const LARGE_OBJECT_KEY_LIMIT = Number(process.env.LARGE_OBJECT_KEY_LIMIT ?? 20);
+const LOG_INCLUDE_CALLSITE = process.env.LOG_INCLUDE_CALLSITE !== 'false';
 
 const originalConsoleError = console.error.bind(console);
+const originalConsoleLog = console.log.bind(console);
 const errorRateState = new Map();
+
+function isLargePlainObject(value) {
+  if (!value || typeof value !== 'object' || Array.isArray(value)) {
+    return false;
+  }
+
+  const prototype = Object.getPrototypeOf(value);
+  if (prototype !== Object.prototype && prototype !== null) {
+    return false;
+  }
+
+  return Object.keys(value).length >= LARGE_OBJECT_KEY_LIMIT;
+}
+
+function getLogCallsite() {
+  if (!LOG_INCLUDE_CALLSITE) {
+    return null;
+  }
+
+  const stack = new Error().stack;
+  if (!stack) {
+    return null;
+  }
+
+  const lines = stack.split('\n').map(line => line.trim());
+  const appLine = lines.find(line =>
+    line.includes('Kora') &&
+    !line.includes('sanitizeLogArg') &&
+    !line.includes('sanitizeLogArgs') &&
+    !line.includes('sanitizedConsoleLog') &&
+    !line.includes('rateLimitedConsoleError')
+  );
+
+  return appLine ?? null;
+}
+
+function sanitizeLogArg(arg) {
+  if (!LOG_SUPPRESS_LARGE_OBJECTS || !isLargePlainObject(arg)) {
+    return arg;
+  }
+
+  const keys = Object.keys(arg);
+  const preview = keys.slice(0, 5).join(', ');
+  const callsite = getLogCallsite();
+  const sourcePart = callsite ? `, source: ${callsite}` : '';
+  return `[log-sanitizer] Large object suppressed (${keys.length} keys, preview: ${preview}${keys.length > 5 ? ', ...' : ''}${sourcePart})`;
+}
+
+function sanitizeLogArgs(args) {
+  return args.map(sanitizeLogArg);
+}
+
+function sanitizedConsoleLog(...args) {
+  const sanitizedArgs = sanitizeLogArgs(args);
+  originalConsoleLog(...sanitizedArgs);
+}
 
 function getErrorLogKey(args) {
   const first = args[0];
@@ -32,8 +86,9 @@ function getErrorLogKey(args) {
 }
 
 function rateLimitedConsoleError(...args) {
+  const sanitizedArgs = sanitizeLogArgs(args);
   const now = Date.now();
-  const key = getErrorLogKey(args);
+  const key = getErrorLogKey(sanitizedArgs);
   const state = errorRateState.get(key);
 
   if (!state || now - state.windowStart >= LOG_WINDOW_MS) {
@@ -48,13 +103,13 @@ function rateLimitedConsoleError(...args) {
       lastSummaryAt: now
     });
 
-    originalConsoleError(...args);
+    originalConsoleError(...sanitizedArgs);
     return;
   }
 
   if (state.emitted < LOG_MAX_PER_KEY) {
     state.emitted += 1;
-    originalConsoleError(...args);
+    originalConsoleError(...sanitizedArgs);
     return;
   }
 
@@ -65,7 +120,15 @@ function rateLimitedConsoleError(...args) {
   }
 }
 
+console.log = sanitizedConsoleLog;
 console.error = rateLimitedConsoleError;
+
+const countingGame = require('./game/CountingGame');
+const { handleMessage, updateNickname, getLevelData, resetUser, hasStoredUser } = require('./XP/leveling');
+const { createBackup } = require('./commands/admin/xpBackup');
+const { startScheduler } = require('./bday/bdayScheduler');
+const { startDailyScheduler } = require('./daily/dailyScheduler');
+const { handleMessageTrigger } = require('./triggers/triggerHandler');
 
 const {
   Client,
@@ -106,6 +169,39 @@ const keepAliveServer = http.createServer((req, res) => {
 
 const PORT = process.env.PORT || 3000;
 keepAliveServer.listen(PORT, () => console.log(`🌱 Keep-alive server listening on port ${PORT}`));
+
+let isShuttingDown = false;
+
+async function shutdown(signal) {
+  if (isShuttingDown) {
+    return;
+  }
+
+  isShuttingDown = true;
+  console.log(`[shutdown] Received ${signal}, closing bot...`);
+
+  try {
+    await new Promise(resolve => keepAliveServer.close(resolve));
+  } catch (error) {
+    console.error('[shutdown] HTTP server close failed:', error);
+  }
+
+  try {
+    await client.destroy();
+  } catch (error) {
+    console.error('[shutdown] Discord client destroy failed:', error);
+  }
+
+  process.exit(0);
+}
+
+process.on('SIGTERM', () => {
+  shutdown('SIGTERM');
+});
+
+process.on('SIGINT', () => {
+  shutdown('SIGINT');
+});
 
 const LEGACY_ROLE_BUTTONS = {
   accept_rules: process.env.RULES_ROLE_ID,
