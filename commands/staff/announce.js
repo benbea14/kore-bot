@@ -85,6 +85,14 @@ function buildRoleButtonRows(guild, rawButtonConfig) {
   return rows;
 }
 
+function getAnnounceErrorMessage(error) {
+  if (error?.message) {
+    return `❌ ${error.message}`;
+  }
+
+  return '❌ Could not send the announcement. Check my channel permissions and input format.';
+}
+
 module.exports = {
   data: new SlashCommandBuilder()
     .setName('announce')
@@ -163,31 +171,48 @@ module.exports = {
         time: 5 * 60 * 1000
       });
 
-      const title = submitted.fields.getTextInputValue('announce_title')?.trim();
-      const text = submitted.fields.getTextInputValue('announce_text');
-      const rawButtonConfig = submitted.fields.getTextInputValue('announce_buttons');
-      const buttonRows = buildRoleButtonRows(interaction.guild, rawButtonConfig);
+      try {
+        const title = submitted.fields.getTextInputValue('announce_title')?.trim();
+        const text = submitted.fields.getTextInputValue('announce_text');
+        const rawButtonConfig = submitted.fields.getTextInputValue('announce_buttons');
+        const buttonRows = buildRoleButtonRows(interaction.guild, rawButtonConfig);
 
-      if (useEmbed) {
-        const embed = new EmbedBuilder()
-          .setColor(0x9B59B6)
-          .setDescription(text)
-          .setTimestamp();
+        if (useEmbed) {
+          const embed = new EmbedBuilder()
+            .setColor(0x9B59B6)
+            .setDescription(text)
+            .setTimestamp();
 
-        if (title) {
-          embed.setTitle(title);
+          if (title) {
+            embed.setTitle(title);
+          }
+
+          await channel.send({ embeds: [embed], components: buttonRows });
+        } else {
+          const content = title ? `**${title}**\n${text}` : text;
+          await channel.send({ content, components: buttonRows });
         }
 
-        await channel.send({ embeds: [embed], components: buttonRows });
-      } else {
-        const content = title ? `**${title}**\n${text}` : text;
-        await channel.send({ content, components: buttonRows });
-      }
+        return submitted.reply({
+          content: `✅ Announcement sent to ${channel}${useEmbed ? ' as an embed' : ''}${buttonRows.length ? ' with role buttons' : ''}.`,
+          flags: 64
+        });
+      } catch (error) {
+        console.error('Error in /announce modal submit:', error);
+        const errorMessage = getAnnounceErrorMessage(error);
 
-      return submitted.reply({
-        content: `✅ Announcement sent to ${channel}${useEmbed ? ' as an embed' : ''}${buttonRows.length ? ' with role buttons' : ''}.`,
-        flags: 64
-      });
+        if (submitted.replied || submitted.deferred) {
+          return submitted.followUp({
+            content: errorMessage,
+            flags: 64
+          });
+        }
+
+        return submitted.reply({
+          content: errorMessage,
+          flags: 64
+        });
+      }
     } catch (error) {
       if (error?.name === 'Error [InteractionCollectorError]') {
         return;
