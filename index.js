@@ -8,6 +8,63 @@ const { startScheduler } = require('./bday/bdayScheduler');
 const { startDailyScheduler } = require('./daily/dailyScheduler');
 const { handleMessageTrigger } = require('./triggers/triggerHandler');
 
+const LOG_WINDOW_MS = Number(process.env.LOG_WINDOW_MS ?? 60_000);
+const LOG_MAX_PER_KEY = Number(process.env.LOG_MAX_PER_KEY ?? 10);
+const LOG_SUMMARY_EVERY_MS = Number(process.env.LOG_SUMMARY_EVERY_MS ?? 15_000);
+
+const originalConsoleError = console.error.bind(console);
+const errorRateState = new Map();
+
+function getErrorLogKey(args) {
+  const first = args[0];
+
+  if (typeof first === 'string' && first.trim()) {
+    return first;
+  }
+
+  if (first && typeof first === 'object' && typeof first.message === 'string') {
+    return first.message;
+  }
+
+  return '__generic_error__';
+}
+
+function rateLimitedConsoleError(...args) {
+  const now = Date.now();
+  const key = getErrorLogKey(args);
+  const state = errorRateState.get(key);
+
+  if (!state || now - state.windowStart >= LOG_WINDOW_MS) {
+    if (state?.suppressed > 0) {
+      originalConsoleError(`[log-throttle] Suppressed ${state.suppressed} repeated errors for key: ${key}`);
+    }
+
+    errorRateState.set(key, {
+      windowStart: now,
+      emitted: 1,
+      suppressed: 0,
+      lastSummaryAt: now
+    });
+
+    originalConsoleError(...args);
+    return;
+  }
+
+  if (state.emitted < LOG_MAX_PER_KEY) {
+    state.emitted += 1;
+    originalConsoleError(...args);
+    return;
+  }
+
+  state.suppressed += 1;
+  if (now - state.lastSummaryAt >= LOG_SUMMARY_EVERY_MS) {
+    state.lastSummaryAt = now;
+    originalConsoleError(`[log-throttle] Suppressed ${state.suppressed} repeated errors for key: ${key}`);
+  }
+}
+
+console.error = rateLimitedConsoleError;
+
 const {
   Client,
   Collection,
@@ -47,6 +104,37 @@ const keepAliveServer = http.createServer((req, res) => {
 
 const PORT = process.env.PORT || 3000;
 keepAliveServer.listen(PORT, () => console.log(`🌱 Keep-alive server listening on port ${PORT}`));
+
+const LEGACY_ROLE_BUTTONS = {
+  accept_rules: process.env.RULES_ROLE_ID,
+  role_rm: '🐨 RM',
+  role_jin: '🐹 Jin',
+  role_suga: '🐱 Suga',
+  role_jhope: '🐿 J-Hope',
+  role_jimin: '🐥 Jimin',
+  role_v: '🐻 V',
+  role_jk: '🐰 JK'
+};
+
+function getRoleFromButton(interaction) {
+  const { customId, guild } = interaction;
+
+  if (customId.startsWith('announce_role:')) {
+    const roleId = customId.slice('announce_role:'.length);
+    return guild.roles.cache.get(roleId) ?? null;
+  }
+
+  if (customId === 'accept_rules') {
+    return guild.roles.cache.get(LEGACY_ROLE_BUTTONS.accept_rules) ?? null;
+  }
+
+  const roleName = LEGACY_ROLE_BUTTONS[customId];
+  if (!roleName) {
+    return null;
+  }
+
+  return guild.roles.cache.find(role => role.name === roleName) ?? null;
+}
 
 // ================= COMMAND HANDLER =================
 
@@ -108,86 +196,40 @@ client.on(Events.InteractionCreate, async interaction => {
 
   // ===== BUTTONS =====
   if (interaction.isButton()) {
-    const customId = interaction.customId;
+    const role = getRoleFromButton(interaction);
+    if (!role) {
+      return;
+    }
 
-    // Accept Rules Button
-    if (customId === 'accept_rules') {
-      const role = interaction.guild.roles.cache.get(process.env.RULES_ROLE_ID);
-
-      if (!role) {
-        return interaction.reply({
-          content: '⚠️ The "ARMY" role was not found.',
-          flags: 64,
-        });
-      }
-
-      if (!role.editable) {
-        return interaction.reply({
-          content: '⚠️ I cannot assign the ARMY role due to role hierarchy/permissions.',
-          flags: 64,
-        });
-      }
-
-      try {
-        await interaction.member.roles.add(role);
-      } catch (error) {
-        console.error('Role assignment error (accept_rules):', error);
-        return interaction.reply({
-          content: '⚠️ I could not assign the ARMY role. Please contact staff.',
-          flags: 64,
-        });
-      }
-
+    if (!role.editable) {
       return interaction.reply({
-        content: '✅ You received the ARMY role.',
+        content: `⚠️ I cannot manage the "${role.name}" role due to role hierarchy or missing permissions.`,
         flags: 64,
       });
     }
 
-    // Bias Roles
-    const biasRoles = {
-      role_rm: '🐨 RM',
-      role_jin: '🐹 Jin',
-      role_suga: '🐱 Suga',
-      role_jhope: '🐿 J-Hope',
-      role_jimin: '🐥 Jimin',
-      role_v: '🐻 V',
-      role_jk: '🐰 JK'
-    };
+    const memberHasRole = interaction.member.roles.cache.has(role.id);
 
-    if (customId in biasRoles) {
-      const roleName = biasRoles[customId];
-      const role = interaction.guild.roles.cache.find(r => r.name === roleName);
-
-      if (!role) {
-        return interaction.reply({
-          content: `⚠️ Role "${roleName}" not found.`,
-          flags: 64,
-        });
-      }
-
-      if (!role.editable) {
-        return interaction.reply({
-          content: `⚠️ I cannot assign "${roleName}" due to role hierarchy/permissions.`,
-          flags: 64,
-        });
-      }
-
-      try {
+    try {
+      if (memberHasRole) {
+        await interaction.member.roles.remove(role);
+      } else {
         await interaction.member.roles.add(role);
-      } catch (error) {
-        console.error(`Role assignment error (${roleName}):`, error);
-        return interaction.reply({
-          content: `⚠️ I could not assign ${roleName}. Please contact staff.`,
-          flags: 64,
-        });
       }
-
+    } catch (error) {
+      console.error(`Role toggle error (${interaction.customId}):`, error);
       return interaction.reply({
-        content: `💜 You now have ${roleName}!`,
+        content: `⚠️ I could not update the "${role.name}" role. Please contact staff.`,
         flags: 64,
       });
     }
+
+    return interaction.reply({
+      content: memberHasRole
+        ? `✅ The "${role.name}" role was removed.`
+        : `💜 You now have the "${role.name}" role!`,
+      flags: 64,
+    });
   }
 });
 
