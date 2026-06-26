@@ -105,6 +105,8 @@ module.exports = {
         .addChannelTypes(
           ChannelType.GuildText,
           ChannelType.GuildAnnouncement,
+          ChannelType.GuildVoice,
+          ChannelType.GuildStageVoice,
           ChannelType.PublicThread,
           ChannelType.PrivateThread,
           ChannelType.AnnouncementThread
