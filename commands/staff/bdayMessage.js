@@ -31,6 +31,53 @@ function getFileExtension(imageAttachment) {
     return '.png';
 }
 
+function normalizeLabel(value) {
+    return (value || '')
+        .trim()
+        .replace(/\s*\(left\)\s*$/i, '')
+        .toLowerCase();
+}
+
+function formatBirthdayLabel(entry) {
+    if (!entry?.day || !entry?.month) return null;
+
+    const monthNames = [
+        'January', 'February', 'March', 'April', 'May', 'June',
+        'July', 'August', 'September', 'October', 'November', 'December'
+    ];
+
+    const monthName = monthNames[entry.month - 1];
+    if (!monthName) return null;
+
+    return `${String(entry.day).padStart(2, '0')}. ${monthName}`;
+}
+
+function findBirthdayForTarget(target, birthdays) {
+    const normalizedTarget = normalizeLabel(target);
+
+    return birthdays.find(entry => {
+        if (entry?.type === 'user') {
+            if (entry.userId && normalizeLabel(entry.userId) === normalizedTarget) {
+                return true;
+            }
+
+            if (entry.displayName && normalizeLabel(entry.displayName) === normalizedTarget) {
+                return true;
+            }
+
+            if (entry.name && normalizeLabel(entry.name) === normalizedTarget) {
+                return true;
+            }
+        }
+
+        if (entry?.type === 'name' && normalizeLabel(entry.name) === normalizedTarget) {
+            return true;
+        }
+
+        return false;
+    });
+}
+
 module.exports = {
     data: new SlashCommandBuilder()
         .setName('message')
@@ -382,7 +429,28 @@ module.exports = {
                     });
                 }
 
-                const allEntries = Object.entries(userMessages);
+                let allEntries = Object.entries(userMessages);
+
+                if (type === 'birthday') {
+                    const birthdays = bdayService.getBirthdays();
+
+                    allEntries = allEntries
+                        .map(([target, tmpl]) => {
+                            const birthdayEntry = findBirthdayForTarget(target, birthdays);
+                            const birthdayLabel = birthdayEntry ? formatBirthdayLabel(birthdayEntry) : null;
+                            const birthdaySortValue = birthdayEntry ? ((birthdayEntry.month || 0) * 100 + (birthdayEntry.day || 0)) : Number.MAX_SAFE_INTEGER;
+
+                            return { target, tmpl, birthdayEntry, birthdayLabel, birthdaySortValue };
+                        })
+                        .sort((a, b) => {
+                            if (a.birthdaySortValue !== b.birthdaySortValue) {
+                                return a.birthdaySortValue - b.birthdaySortValue;
+                            }
+                            return a.target.localeCompare(b.target);
+                        })
+                        .map(({ target, tmpl }) => [target, tmpl]);
+                }
+
                 const totalPages = Math.max(1, Math.ceil(allEntries.length / pageSize));
 
                 if (page > totalPages) {
@@ -401,9 +469,12 @@ module.exports = {
                     .setFooter({ text: `Page ${page}/${totalPages} • Total: ${allEntries.length}` })
                     .setTimestamp();
 
+                const birthdays = type === 'birthday' ? bdayService.getBirthdays() : [];
+
                 // Fetch user nicknames for display
                 const promises = pagedEntries.map(async ([target, tmpl]) => {
                     let displayName = target;
+                    let birthdayLabel = null;
                     
                     // If target looks like a user ID (numeric), fetch the user to get their username
                     if (/^\d{17,19}$/.test(target)) {
@@ -415,10 +486,17 @@ module.exports = {
                             displayName = target;
                         }
                     }
+
+                    if (type === 'birthday') {
+                        const birthdayEntry = findBirthdayForTarget(target, birthdays);
+                        birthdayLabel = birthdayEntry ? formatBirthdayLabel(birthdayEntry) : null;
+                    }
+
+                    const prefix = birthdayLabel ? `👤 ${displayName} | ${birthdayLabel}` : `👤 ${displayName}`;
                     
                     return { 
-                        name: `👤 ${displayName}`, 
-                        value: tmpl.length > 100 ? tmpl.substring(0, 100) + '...' : tmpl 
+                        name: prefix,
+                        value: (tmpl || '').length > 100 ? (tmpl || '').substring(0, 100) + '...' : (tmpl || '')
                     };
                 });
 
@@ -598,5 +676,7 @@ module.exports = {
                 flags: 64
             });
         }
+    }
+};
     }
 };
