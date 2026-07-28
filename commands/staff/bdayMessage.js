@@ -1,4 +1,4 @@
-const { SlashCommandBuilder, PermissionFlagsBits, EmbedBuilder } = require('discord.js');
+const { SlashCommandBuilder, PermissionFlagsBits, EmbedBuilder, ModalBuilder, ActionRowBuilder, TextInputBuilder, TextInputStyle } = require('discord.js');
 const fs = require('node:fs');
 const path = require('node:path');
 const bdayService = require('../../bday/bdayService');
@@ -324,7 +324,17 @@ module.exports = {
                     .setRequired(true)
                     .setMaxLength(4000);
 
-                modal.addComponents(new ActionRowBuilder().addComponents(templateInput));
+                const titleInput = new TextInputBuilder()
+                    .setCustomId('message_title')
+                    .setLabel('Title (optional)')
+                    .setStyle(TextInputStyle.Short)
+                    .setRequired(false)
+                    .setMaxLength(256);
+
+                modal.addComponents(
+                    new ActionRowBuilder().addComponents(titleInput),
+                    new ActionRowBuilder().addComponents(templateInput)
+                );
 
                 await interaction.showModal(modal);
 
@@ -334,10 +344,12 @@ module.exports = {
                 });
 
                 try {
+                    const title = submitted.fields.getTextInputValue('message_title')?.trim();
                     const template = submitted.fields.getTextInputValue('message_template')?.trim();
                     const image = imageAttachment ? await storeAttachmentImage(imageAttachment) : null;
 
                     const section = ensureMessageSection(data, type);
+                    section.title = title || null;
                     section.template = template;
 
                     if (image) {
@@ -476,7 +488,17 @@ module.exports = {
                     .setRequired(true)
                     .setMaxLength(4000);
 
-                modal.addComponents(new ActionRowBuilder().addComponents(templateInput));
+                const titleInput = new TextInputBuilder()
+                    .setCustomId('message_title')
+                    .setLabel('Title (optional)')
+                    .setStyle(TextInputStyle.Short)
+                    .setRequired(false)
+                    .setMaxLength(256);
+
+                modal.addComponents(
+                    new ActionRowBuilder().addComponents(titleInput),
+                    new ActionRowBuilder().addComponents(templateInput)
+                );
 
                 await interaction.showModal(modal);
 
@@ -486,6 +508,7 @@ module.exports = {
                 });
 
                 try {
+                    const title = submitted.fields.getTextInputValue('message_title')?.trim();
                     const template = submitted.fields.getTextInputValue('message_template')?.trim();
                     const image = imageAttachment ? await storeAttachmentImage(imageAttachment) : null;
 
@@ -496,6 +519,7 @@ module.exports = {
                     }
 
                     data.messages[type].userMessages[target] = {
+                        title: title || null,
                         template,
                         image
                     };
