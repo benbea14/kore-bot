@@ -78,6 +78,52 @@ function findBirthdayForTarget(target, birthdays) {
     });
 }
 
+function getMessageTemplateValue(messageConfig) {
+    if (typeof messageConfig === 'string') {
+        return messageConfig;
+    }
+
+    return messageConfig?.template ?? messageConfig?.text ?? messageConfig?.content ?? '';
+}
+
+function ensureMessageSection(data, type) {
+    if (!data.messages[type]) {
+        data.messages[type] = {};
+    }
+
+    return data.messages[type];
+}
+
+async function storeAttachmentImage(imageAttachment) {
+    if (!imageAttachment) {
+        return null;
+    }
+
+    if (imageAttachment?.contentType && !imageAttachment.contentType.startsWith('image/')) {
+        throw new Error('The uploaded file is not an image.');
+    }
+
+    if (!imageAttachment.url) {
+        throw new Error('Could not read the uploaded file URL.');
+    }
+
+    ensureLocalImageDir();
+
+    const response = await fetch(imageAttachment.url);
+    if (!response.ok) {
+        throw new Error('Could not download the uploaded image from Discord. Please try again.');
+    }
+
+    const extension = getFileExtension(imageAttachment);
+    const fileName = `bday_${Date.now()}_${Math.random().toString(16).slice(2)}${extension}`;
+    const filePath = path.join(LOCAL_IMAGE_DIR, fileName);
+    const buffer = Buffer.from(await response.arrayBuffer());
+
+    fs.writeFileSync(filePath, buffer);
+
+    return `${LOCAL_IMAGE_PREFIX}${fileName}`;
+}
+
 module.exports = {
     data: new SlashCommandBuilder()
         .setName('message')
@@ -98,10 +144,10 @@ module.exports = {
                             { name: 'Server', value: 'server' }
                         )
                 )
-                .addStringOption(opt =>
-                    opt.setName('template')
-                        .setDescription('Message template with placeholders')
-                        .setRequired(true)
+                .addAttachmentOption(opt =>
+                    opt.setName('image')
+                        .setDescription('Optional image attachment for this message')
+                        .setRequired(false)
                 )
         )
 
@@ -160,11 +206,6 @@ module.exports = {
                             { name: 'Event', value: 'event' }
                         )
                 )
-                .addStringOption(opt =>
-                    opt.setName('template')
-                        .setDescription('Custom message for this user')
-                        .setRequired(true)
-                )
                 .addUserOption(opt =>
                     opt.setName('user')
                         .setDescription('Discord user')
@@ -173,6 +214,11 @@ module.exports = {
                 .addStringOption(opt =>
                     opt.setName('name')
                         .setDescription('Name to personalize for')
+                        .setRequired(false)
+                )
+                .addAttachmentOption(opt =>
+                    opt.setName('image')
+                        .setDescription('Optional image attachment for this message')
                         .setRequired(false)
                 )
         )
@@ -224,7 +270,7 @@ module.exports = {
         // IMAGE-ADD
         .addSubcommand(sub =>
             sub.setName('image-add')
-                .setDescription('Add an image for birthday messages')
+                .setDescription('Add an image for message fallback')
                 .addAttachmentOption(opt =>
                     opt.setName('image')
                         .setDescription('Upload an image file')
@@ -240,13 +286,13 @@ module.exports = {
         // IMAGE-LIST
         .addSubcommand(sub =>
             sub.setName('image-list')
-                .setDescription('List all birthday message images')
+                .setDescription('List all message images')
         )
 
         // IMAGE-REMOVE
         .addSubcommand(sub =>
             sub.setName('image-remove')
-                .setDescription('Remove a birthday message image by index')
+                .setDescription('Remove a message image by index')
                 .addIntegerOption(opt =>
                     opt.setName('index')
                         .setDescription('Image number from /message image-list')
@@ -265,20 +311,66 @@ module.exports = {
 
             // SET
             if (sub === 'set') {
+                const imageAttachment = interaction.options.getAttachment('image');
+                const modalCustomId = `message_set:${type}:${interaction.id}`;
+                const modal = new ModalBuilder()
+                    .setCustomId(modalCustomId)
+                    .setTitle(`Set ${type.charAt(0).toUpperCase() + type.slice(1)} Message`);
 
-                const template = interaction.options.getString('template');
+                const templateInput = new TextInputBuilder()
+                    .setCustomId('message_template')
+                    .setLabel('Message text')
+                    .setStyle(TextInputStyle.Paragraph)
+                    .setRequired(true)
+                    .setMaxLength(4000);
 
-                if (!data.messages[type]) {
-                    data.messages[type] = {};
-                }
+                modal.addComponents(new ActionRowBuilder().addComponents(templateInput));
 
-                data.messages[type].template = template;
-                bdayService.saveData(data);
+                await interaction.showModal(modal);
 
-                return interaction.reply({
-                    content: `✅ Custom message set for **${type}**`,
-                    flags: 64
+                const submitted = await interaction.awaitModalSubmit({
+                    filter: i => i.customId === modalCustomId && i.user.id === interaction.user.id,
+                    time: 5 * 60 * 1000
                 });
+
+                try {
+                    const template = submitted.fields.getTextInputValue('message_template')?.trim();
+                    const image = imageAttachment ? await storeAttachmentImage(imageAttachment) : null;
+
+                    const section = ensureMessageSection(data, type);
+                    section.template = template;
+
+                    if (image) {
+                        section.image = image;
+                    } else {
+                        delete section.image;
+                    }
+
+                    bdayService.saveData(data);
+
+                    return submitted.reply({
+                        content: `✅ Custom message set for **${type}**${image ? ' with a custom image' : ''}`,
+                        flags: 64
+                    });
+                } catch (error) {
+                    console.error('Error in /message set modal submit:', error);
+
+                    const errorMessage = error?.message
+                        ? `❌ ${error.message}`
+                        : '❌ Could not save the message.';
+
+                    if (submitted.replied || submitted.deferred) {
+                        return submitted.followUp({
+                            content: errorMessage,
+                            flags: 64
+                        });
+                    }
+
+                    return submitted.reply({
+                        content: errorMessage,
+                        flags: 64
+                    });
+                }
             }
 
             // PREVIEW
@@ -366,27 +458,72 @@ module.exports = {
 
                 const userOption = interaction.options.getUser('user');
                 const nameOption = interaction.options.getString('name');
-                const template = interaction.options.getString('template');
+                const imageAttachment = interaction.options.getAttachment('image');
 
                 // nameOption takes priority if provided, otherwise use userOption
                 const target = nameOption || userOption?.id;
                 const displayTarget = nameOption || userOption?.username;
 
-                if (!data.messages[type]) {
-                    data.messages[type] = {};
-                }
+                const modalCustomId = `message_user_set:${type}:${target}:${interaction.id}`;
+                const modal = new ModalBuilder()
+                    .setCustomId(modalCustomId)
+                    .setTitle(`Set ${type.charAt(0).toUpperCase() + type.slice(1)} Message`);
 
-                if (!data.messages[type].userMessages) {
-                    data.messages[type].userMessages = {};
-                }
+                const templateInput = new TextInputBuilder()
+                    .setCustomId('message_template')
+                    .setLabel('Personal message text')
+                    .setStyle(TextInputStyle.Paragraph)
+                    .setRequired(true)
+                    .setMaxLength(4000);
 
-                data.messages[type].userMessages[target] = template;
-                bdayService.saveData(data);
+                modal.addComponents(new ActionRowBuilder().addComponents(templateInput));
 
-                return interaction.reply({
-                    content: `✅ Personal message set for **${displayTarget}** on ${type}!`,
-                    flags: 64
+                await interaction.showModal(modal);
+
+                const submitted = await interaction.awaitModalSubmit({
+                    filter: i => i.customId === modalCustomId && i.user.id === interaction.user.id,
+                    time: 5 * 60 * 1000
                 });
+
+                try {
+                    const template = submitted.fields.getTextInputValue('message_template')?.trim();
+                    const image = imageAttachment ? await storeAttachmentImage(imageAttachment) : null;
+
+                    ensureMessageSection(data, type);
+
+                    if (!data.messages[type].userMessages) {
+                        data.messages[type].userMessages = {};
+                    }
+
+                    data.messages[type].userMessages[target] = {
+                        template,
+                        image
+                    };
+                    bdayService.saveData(data);
+
+                    return submitted.reply({
+                        content: `✅ Personal message set for **${displayTarget}** on ${type}!${image ? ' Custom image included.' : ''}`,
+                        flags: 64
+                    });
+                } catch (error) {
+                    console.error('Error in /message user-set modal submit:', error);
+
+                    const errorMessage = error?.message
+                        ? `❌ ${error.message}`
+                        : '❌ Could not save the personal message.';
+
+                    if (submitted.replied || submitted.deferred) {
+                        return submitted.followUp({
+                            content: errorMessage,
+                            flags: 64
+                        });
+                    }
+
+                    return submitted.reply({
+                        content: errorMessage,
+                        flags: 64
+                    });
+                }
             }
 
             // USER-REMOVE (remove personalized message for a user)
@@ -492,11 +629,13 @@ module.exports = {
                         birthdayLabel = birthdayEntry ? formatBirthdayLabel(birthdayEntry) : null;
                     }
 
+                    const templateValue = getMessageTemplateValue(tmpl);
+
                     const prefix = birthdayLabel ? `👤 ${displayName} | ${birthdayLabel}` : `👤 ${displayName}`;
                     
                     return { 
                         name: prefix,
-                        value: (tmpl || '').length > 100 ? (tmpl || '').substring(0, 100) + '...' : (tmpl || '')
+                        value: templateValue.length > 100 ? templateValue.substring(0, 100) + '...' : templateValue
                     };
                 });
 
@@ -580,7 +719,7 @@ module.exports = {
 
                 if (data.messages.birthday.images.includes(candidateUrl)) {
                     return interaction.reply({
-                        content: '⚠️ This image is already in the birthday image list.',
+                        content: '⚠️ This image is already in the message image list.',
                         flags: 64
                     });
                 }
@@ -589,7 +728,7 @@ module.exports = {
                 bdayService.saveData(data);
 
                 return interaction.reply({
-                    content: `✅ Birthday image added. Total images: **${data.messages.birthday.images.length}**`,
+                    content: `✅ Message image added. Total images: **${data.messages.birthday.images.length}**`,
                     flags: 64
                 });
             }
@@ -601,7 +740,7 @@ module.exports = {
 
                 if (images.length === 0) {
                     return interaction.reply({
-                        content: '❌ No birthday images configured yet.',
+                        content: '❌ No message images configured yet.',
                         flags: 64
                     });
                 }
@@ -618,7 +757,7 @@ module.exports = {
 
                 const embed = new EmbedBuilder()
                     .setColor(0x9B59B6)
-                    .setTitle('Birthday Message Images')
+                    .setTitle('Message Images')
                     .setDescription(list.length > 4000 ? `${list.slice(0, 3950)}\n...` : list)
                     .setFooter({ text: `Total images: ${images.length}` })
                     .setTimestamp();
@@ -634,7 +773,7 @@ module.exports = {
 
                 if (images.length === 0) {
                     return interaction.reply({
-                        content: '❌ No birthday images configured.',
+                        content: '❌ No message images configured.',
                         flags: 64
                     });
                 }
