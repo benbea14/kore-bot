@@ -647,11 +647,30 @@ module.exports = {
                     let displayName = target;
                     let birthdayLabel = null;
                     
-                    // If target looks like a user ID (numeric), fetch the user to get their username
+                    // If target looks like a user ID (numeric), fetch guild member for nickname + username.
                     if (/^\d{17,19}$/.test(target)) {
                         try {
-                            const user = await interaction.client.users.fetch(target);
-                            displayName = user.username;
+                            let username = null;
+                            let nickname = null;
+
+                            if (interaction.guild) {
+                                const member = await interaction.guild.members.fetch(target);
+                                username = member?.user?.username || null;
+                                nickname = member?.nickname || null;
+                            }
+
+                            if (!username) {
+                                const user = await interaction.client.users.fetch(target);
+                                username = user?.username || null;
+                            }
+
+                            if (nickname && username && nickname !== username) {
+                                displayName = `${nickname} (@${username})`;
+                            } else if (username) {
+                                displayName = username;
+                            } else if (nickname) {
+                                displayName = nickname;
+                            }
                         } catch (err) {
                             // If fetch fails, use the ID as fallback
                             displayName = target;
