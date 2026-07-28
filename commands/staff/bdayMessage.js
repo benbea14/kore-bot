@@ -338,12 +338,13 @@ module.exports = {
 
                 await interaction.showModal(modal);
 
-                const submitted = await interaction.awaitModalSubmit({
-                    filter: i => i.customId === modalCustomId && i.user.id === interaction.user.id,
-                    time: 5 * 60 * 1000
-                });
-
+                let submitted;
                 try {
+                    submitted = await interaction.awaitModalSubmit({
+                        filter: i => i.customId === modalCustomId && i.user.id === interaction.user.id,
+                        time: 5 * 60 * 1000
+                    });
+
                     const title = submitted.fields.getTextInputValue('message_title')?.trim();
                     const template = submitted.fields.getTextInputValue('message_template')?.trim();
                     const image = imageAttachment ? await storeAttachmentImage(imageAttachment) : null;
@@ -365,6 +366,10 @@ module.exports = {
                         flags: 64
                     });
                 } catch (error) {
+                    if (error?.name === 'Error [InteractionCollectorError]') {
+                        return;
+                    }
+
                     console.error('Error in /message set modal submit:', error);
 
                     const errorMessage = error?.message
@@ -502,12 +507,13 @@ module.exports = {
 
                 await interaction.showModal(modal);
 
-                const submitted = await interaction.awaitModalSubmit({
-                    filter: i => i.customId === modalCustomId && i.user.id === interaction.user.id,
-                    time: 5 * 60 * 1000
-                });
-
+                let submitted;
                 try {
+                    submitted = await interaction.awaitModalSubmit({
+                        filter: i => i.customId === modalCustomId && i.user.id === interaction.user.id,
+                        time: 5 * 60 * 1000
+                    });
+
                     const title = submitted.fields.getTextInputValue('message_title')?.trim();
                     const template = submitted.fields.getTextInputValue('message_template')?.trim();
                     const image = imageAttachment ? await storeAttachmentImage(imageAttachment) : null;
@@ -530,6 +536,10 @@ module.exports = {
                         flags: 64
                     });
                 } catch (error) {
+                    if (error?.name === 'Error [InteractionCollectorError]') {
+                        return;
+                    }
+
                     console.error('Error in /message user-set modal submit:', error);
 
                     const errorMessage = error?.message
@@ -832,7 +842,18 @@ module.exports = {
         }
 
         catch (err) {
+            if (err?.name === 'Error [InteractionCollectorError]') {
+                return;
+            }
+
             console.error(err);
+
+            if (interaction.replied || interaction.deferred) {
+                return interaction.followUp({
+                    content: '❌ Something went wrong.',
+                    flags: 64
+                });
+            }
 
             return interaction.reply({
                 content: '❌ Something went wrong.',
