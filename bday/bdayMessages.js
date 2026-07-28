@@ -13,16 +13,18 @@ const LOCAL_IMAGE_DIR = path.join(
 
 function normalizeMessageConfig(config) {
     if (!config) {
-        return { template: '', image: null };
+        return { template: '', image: null, title: null };
     }
 
     if (typeof config === 'string') {
-        return { template: config, image: null };
+        return { template: config, image: null, title: null };
     }
 
     return {
         template: config.template ?? config.text ?? config.content ?? '',
         image: config.image ?? config.pic ?? null
+        ,
+        title: config.title ?? config.heading ?? null
     };
 }
 
@@ -100,14 +102,17 @@ async function sendBirthdayMessage(client, entry, previewChannel = null) {
     // CHECK FOR USER-SPECIFIC MESSAGE
     let template = birthdayConfig.template;
     let selectedImage = birthdayConfig.image;
+    let selectedTitle = birthdayConfig.title;
     if (entry.type === "user" && data.messages?.birthday?.userMessages?.[entry.userId]) {
         const userConfig = normalizeMessageConfig(data.messages.birthday.userMessages[entry.userId]);
         template = userConfig.template;
         selectedImage = userConfig.image || selectedImage;
+        selectedTitle = userConfig.title || selectedTitle;
     } else if (entry.type === "name" && data.messages?.birthday?.userMessages?.[entry.name]) {
         const userConfig = normalizeMessageConfig(data.messages.birthday.userMessages[entry.name]);
         template = userConfig.template;
         selectedImage = userConfig.image || selectedImage;
+        selectedTitle = userConfig.title || selectedTitle;
     }
 
     const messageContent = formatTemplate(template, {
@@ -130,6 +135,10 @@ async function sendBirthdayMessage(client, entry, previewChannel = null) {
             .setColor(0x9B59B6)
             .setDescription(messageContent);
 
+        if (selectedTitle) {
+            embed.setTitle(selectedTitle);
+        }
+
         if (imageAsset?.remoteUrl) {
             embed.setImage(imageAsset.remoteUrl);
             await channel.send({ embeds: [embed] });
@@ -146,14 +155,18 @@ async function sendBirthdayMessage(client, entry, previewChannel = null) {
 
     } else {
 
+        const contentWithTitle = selectedTitle
+            ? `**${selectedTitle}**\n${messageContent}`
+            : messageContent;
+
         if (imageAsset?.file) {
-            await channel.send({ content: messageContent, files: [imageAsset.file] });
+            await channel.send({ content: contentWithTitle, files: [imageAsset.file] });
             return;
         }
 
         const content = imageAsset?.remoteUrl
-            ? `${messageContent}\n${imageAsset.remoteUrl}`
-            : messageContent;
+            ? `${contentWithTitle}\n${imageAsset.remoteUrl}`
+            : contentWithTitle;
 
         await channel.send({ content });
     }
@@ -181,10 +194,12 @@ async function sendEventMessage(client, event, previewChannel = null) {
     // CHECK FOR CUSTOM MESSAGE FOR THIS EVENT
     let template = eventConfig.template;
     let selectedImage = eventConfig.image;
+    let selectedTitle = eventConfig.title;
     if (data.messages?.event?.userMessages?.[event.name]) {
         const userConfig = normalizeMessageConfig(data.messages.event.userMessages[event.name]);
         template = userConfig.template;
         selectedImage = userConfig.image || selectedImage;
+        selectedTitle = userConfig.title || selectedTitle;
     }
 
     const messageContent = formatTemplate(template, {
@@ -209,6 +224,10 @@ async function sendEventMessage(client, event, previewChannel = null) {
             .setColor(0x5865F2)
             .setDescription(messageContent);
 
+        if (selectedTitle) {
+            embed.setTitle(selectedTitle);
+        }
+
         if (imageAsset?.remoteUrl) {
             embed.setImage(imageAsset.remoteUrl);
         } else if (imageAsset?.file) {
@@ -224,14 +243,18 @@ async function sendEventMessage(client, event, previewChannel = null) {
 
     } else {
 
+        const contentWithTitle = selectedTitle
+            ? `**${selectedTitle}**\n${messageContent}`
+            : messageContent;
+
         if (imageAsset?.file) {
-            await channel.send({ content: messageContent, files: [imageAsset.file] });
+            await channel.send({ content: contentWithTitle, files: [imageAsset.file] });
             return;
         }
 
         const content = imageAsset?.remoteUrl
-            ? `${messageContent}\n${imageAsset.remoteUrl}`
-            : messageContent;
+            ? `${contentWithTitle}\n${imageAsset.remoteUrl}`
+            : contentWithTitle;
 
         await channel.send({ content });
     }
