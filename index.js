@@ -226,6 +226,30 @@ function getRoleFromButton(interaction) {
   return null;
 }
 
+function isKnownInteractionResponseError(error) {
+  const code = Number(error?.code);
+  return code === 10062 || code === 40060;
+}
+
+async function replyToInteractionSafely(interaction, payload) {
+  try {
+    if (interaction.replied || interaction.deferred) {
+      return await interaction.followUp(payload);
+    }
+
+    return await interaction.reply(payload);
+  } catch (error) {
+    if (isKnownInteractionResponseError(error)) {
+      console.error(
+        `[interaction] Reply skipped (${error.code}): ${error.message}`
+      );
+      return null;
+    }
+
+    throw error;
+  }
+}
+
 // ================= COMMAND HANDLER =================
 
 const foldersPath = path.join(__dirname, 'commands');
@@ -256,6 +280,10 @@ client.once(Events.ClientReady, async () => {
   startDailyScheduler(client);
 });
 
+client.on('error', error => {
+  console.error('[client] Unhandled client error event:', error);
+});
+
 // ================= INTERACTIONS =================
 
 client.on(Events.InteractionCreate, async interaction => {
@@ -270,17 +298,10 @@ client.on(Events.InteractionCreate, async interaction => {
     } catch (error) {
       console.error(error);
 
-      if (interaction.replied || interaction.deferred) {
-        await interaction.followUp({
-          content: '⚠️ Command failed, contact technical admin',
-          flags: 64
-        });
-      } else {
-        await interaction.reply({
-          content: '⚠️ Command failed, contact technical admin',
-          flags: 64
-        });
-      }
+      await replyToInteractionSafely(interaction, {
+        content: '⚠️ Command failed, contact technical admin',
+        flags: 64
+      });
     }
   }
 
