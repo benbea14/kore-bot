@@ -11,6 +11,21 @@ const LOCAL_IMAGE_DIR = path.join(
     'bday-images'
 );
 
+function normalizeMessageConfig(config) {
+    if (!config) {
+        return { template: '', image: null };
+    }
+
+    if (typeof config === 'string') {
+        return { template: config, image: null };
+    }
+
+    return {
+        template: config.template ?? config.text ?? config.content ?? '',
+        image: config.image ?? config.pic ?? null
+    };
+}
+
 function resolveBirthdayImageAsset(imageRef) {
     if (!imageRef || typeof imageRef !== 'string') {
         return null;
@@ -55,7 +70,9 @@ async function sendBirthdayMessage(client, entry, previewChannel = null) {
 
     const useEmbed = data.messages?.birthday?.useEmbed ?? true;
 
-    if (!data.messages?.birthday?.template) {
+    const birthdayConfig = normalizeMessageConfig(data.messages?.birthday);
+
+    if (!birthdayConfig.template) {
         console.warn('Birthday template not configured');
         return;
     }
@@ -81,11 +98,16 @@ async function sendBirthdayMessage(client, entry, previewChannel = null) {
     const age = bdayService.calculateAge(entry) ?? "";
 
     // CHECK FOR USER-SPECIFIC MESSAGE
-    let template = data.messages.birthday.template;
+    let template = birthdayConfig.template;
+    let selectedImage = birthdayConfig.image;
     if (entry.type === "user" && data.messages?.birthday?.userMessages?.[entry.userId]) {
-        template = data.messages.birthday.userMessages[entry.userId];
+        const userConfig = normalizeMessageConfig(data.messages.birthday.userMessages[entry.userId]);
+        template = userConfig.template;
+        selectedImage = userConfig.image || selectedImage;
     } else if (entry.type === "name" && data.messages?.birthday?.userMessages?.[entry.name]) {
-        template = data.messages.birthday.userMessages[entry.name];
+        const userConfig = normalizeMessageConfig(data.messages.birthday.userMessages[entry.name]);
+        template = userConfig.template;
+        selectedImage = userConfig.image || selectedImage;
     }
 
     const messageContent = formatTemplate(template, {
@@ -96,11 +118,11 @@ async function sendBirthdayMessage(client, entry, previewChannel = null) {
         server: channel.guild.name ?? ""
     });
 
-    const imagePool = data.messages?.birthday?.images || [];
+    const imagePool = Array.isArray(data.messages?.birthday?.images) ? data.messages.birthday.images : [];
     const randomImage = imagePool.length > 0
         ? imagePool[Math.floor(Math.random() * imagePool.length)]
         : null;
-    const imageAsset = resolveBirthdayImageAsset(randomImage);
+    const imageAsset = resolveBirthdayImageAsset(selectedImage || randomImage);
 
     if (useEmbed) {
 
@@ -149,15 +171,20 @@ async function sendEventMessage(client, event, previewChannel = null) {
 
     const useEmbed = data.messages?.event?.useEmbed ?? true;
 
-    if (!data.messages?.event?.template) {
+    const eventConfig = normalizeMessageConfig(data.messages?.event);
+
+    if (!eventConfig.template) {
         console.warn('Event template not configured');
         return;
     }
 
     // CHECK FOR CUSTOM MESSAGE FOR THIS EVENT
-    let template = data.messages.event.template;
+    let template = eventConfig.template;
+    let selectedImage = eventConfig.image;
     if (data.messages?.event?.userMessages?.[event.name]) {
-        template = data.messages.event.userMessages[event.name];
+        const userConfig = normalizeMessageConfig(data.messages.event.userMessages[event.name]);
+        template = userConfig.template;
+        selectedImage = userConfig.image || selectedImage;
     }
 
     const messageContent = formatTemplate(template, {
@@ -168,17 +195,45 @@ async function sendEventMessage(client, event, previewChannel = null) {
         server: channel.guild.name ?? ""
     });
 
+    const imagePool = Array.isArray(data.messages?.event?.images) && data.messages.event.images.length > 0
+        ? data.messages.event.images
+        : (Array.isArray(data.messages?.birthday?.images) ? data.messages.birthday.images : []);
+    const randomImage = imagePool.length > 0
+        ? imagePool[Math.floor(Math.random() * imagePool.length)]
+        : null;
+    const imageAsset = resolveBirthdayImageAsset(selectedImage || randomImage);
+
     if (useEmbed) {
 
         const embed = new EmbedBuilder()
             .setColor(0x5865F2)
             .setDescription(messageContent);
 
+        if (imageAsset?.remoteUrl) {
+            embed.setImage(imageAsset.remoteUrl);
+        } else if (imageAsset?.file) {
+            embed.setImage(`attachment://${imageAsset.fileName}`);
+        }
+
+        if (imageAsset?.file) {
+            await channel.send({ embeds: [embed], files: [imageAsset.file] });
+            return;
+        }
+
         await channel.send({ embeds: [embed] });
 
     } else {
 
-        await channel.send({ content: messageContent });
+        if (imageAsset?.file) {
+            await channel.send({ content: messageContent, files: [imageAsset.file] });
+            return;
+        }
+
+        const content = imageAsset?.remoteUrl
+            ? `${messageContent}\n${imageAsset.remoteUrl}`
+            : messageContent;
+
+        await channel.send({ content });
     }
 }
 
