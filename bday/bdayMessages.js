@@ -22,8 +22,7 @@ function normalizeMessageConfig(config) {
 
     return {
         template: config.template ?? config.text ?? config.content ?? '',
-        image: config.image ?? config.pic ?? null
-        ,
+        image: config.image ?? config.pic ?? null,
         title: config.title ?? config.heading ?? null
     };
 }
@@ -80,7 +79,7 @@ async function sendBirthdayMessage(client, entry, previewChannel = null) {
     }
 
     const name = entry.type === "user"
-        ? `<@${entry.userId}>`
+        ? (entry.displayName || entry.name || `<@${entry.userId}>`)
         : entry.name;
 
     let user = "";
@@ -117,11 +116,20 @@ async function sendBirthdayMessage(client, entry, previewChannel = null) {
 
     const messageContent = formatTemplate(template, {
         name,
-        user,
+        user: entry.type === "user" ? `<@${entry.userId}>` : entry.name,
         age,
         type: "birthday",
         server: channel.guild.name ?? ""
     });
+    const messageTitle = selectedTitle
+        ? formatTemplate(selectedTitle, {
+            name,
+            user: entry.type === "user" ? `<@${entry.userId}>` : entry.name,
+            age,
+            type: "birthday",
+            server: channel.guild.name ?? ""
+        })
+        : null;
 
     const imagePool = Array.isArray(data.messages?.birthday?.images) ? data.messages.birthday.images : [];
     const randomImage = imagePool.length > 0
@@ -135,8 +143,8 @@ async function sendBirthdayMessage(client, entry, previewChannel = null) {
             .setColor(0x9B59B6)
             .setDescription(messageContent);
 
-        if (selectedTitle) {
-            embed.setTitle(selectedTitle);
+        if (messageTitle) {
+            embed.setTitle(messageTitle);
         }
 
         if (imageAsset?.remoteUrl) {
@@ -155,8 +163,8 @@ async function sendBirthdayMessage(client, entry, previewChannel = null) {
 
     } else {
 
-        const contentWithTitle = selectedTitle
-            ? `**${selectedTitle}**\n${messageContent}`
+        const contentWithTitle = messageTitle
+            ? `**${messageTitle}**\n${messageContent}`
             : messageContent;
 
         if (imageAsset?.file) {
@@ -209,6 +217,15 @@ async function sendEventMessage(client, event, previewChannel = null) {
         type: "event",
         server: channel.guild.name ?? ""
     });
+    const messageTitle = selectedTitle
+        ? formatTemplate(selectedTitle, {
+            name: event.name,
+            user: event.name,
+            age: "",
+            type: "event",
+            server: channel.guild.name ?? ""
+        })
+        : null;
 
     const imagePool = Array.isArray(data.messages?.event?.images) && data.messages.event.images.length > 0
         ? data.messages.event.images
@@ -224,8 +241,8 @@ async function sendEventMessage(client, event, previewChannel = null) {
             .setColor(0x5865F2)
             .setDescription(messageContent);
 
-        if (selectedTitle) {
-            embed.setTitle(selectedTitle);
+        if (messageTitle) {
+            embed.setTitle(messageTitle);
         }
 
         if (imageAsset?.remoteUrl) {
@@ -243,8 +260,8 @@ async function sendEventMessage(client, event, previewChannel = null) {
 
     } else {
 
-        const contentWithTitle = selectedTitle
-            ? `**${selectedTitle}**\n${messageContent}`
+        const contentWithTitle = messageTitle
+            ? `**${messageTitle}**\n${messageContent}`
             : messageContent;
 
         if (imageAsset?.file) {
