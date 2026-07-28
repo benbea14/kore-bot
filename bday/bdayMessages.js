@@ -49,6 +49,23 @@ function resolveBirthdayImageAsset(imageRef) {
     };
 }
 
+async function resolveBirthdayName(channel, entry) {
+    if (entry.type !== 'user') {
+        return entry.name;
+    }
+
+    if (entry.displayName) {
+        return entry.displayName;
+    }
+
+    try {
+        const member = await channel.guild.members.fetch(entry.userId);
+        return member.nickname || member.user.username;
+    } catch (error) {
+        return entry.name || '';
+    }
+}
+
 // PLACEHOLDER SYSTEM
 function formatTemplate(template, data) {
     return template
@@ -78,23 +95,8 @@ async function sendBirthdayMessage(client, entry, previewChannel = null) {
         return;
     }
 
-    const name = entry.type === "user"
-        ? (entry.displayName || entry.name || `<@${entry.userId}>`)
-        : entry.name;
-
-    let user = "";
-    if (entry.type === "user") {
-        if (entry.displayName) {
-            user = entry.displayName;
-        } else {
-            try {
-                const member = await channel.guild.members.fetch(entry.userId);
-                user = member.displayName;
-            } catch (err) {
-                user = entry.name || "";
-            }
-        }
-    }
+    const name = await resolveBirthdayName(channel, entry);
+    const user = entry.type === "user" ? `<@${entry.userId}>` : entry.name;
 
     const age = bdayService.calculateAge(entry) ?? "";
 
@@ -116,7 +118,7 @@ async function sendBirthdayMessage(client, entry, previewChannel = null) {
 
     const messageContent = formatTemplate(template, {
         name,
-        user: entry.type === "user" ? `<@${entry.userId}>` : entry.name,
+        user,
         age,
         type: "birthday",
         server: channel.guild.name ?? ""
@@ -124,7 +126,7 @@ async function sendBirthdayMessage(client, entry, previewChannel = null) {
     const messageTitle = selectedTitle
         ? formatTemplate(selectedTitle, {
             name,
-            user: entry.type === "user" ? `<@${entry.userId}>` : entry.name,
+            user,
             age,
             type: "birthday",
             server: channel.guild.name ?? ""
