@@ -54,15 +54,11 @@ async function resolveBirthdayName(channel, entry) {
         return entry.name;
     }
 
-    if (entry.displayName) {
-        return entry.displayName;
-    }
-
     try {
         const member = await channel.guild.members.fetch(entry.userId);
-        return member.nickname || member.user.username;
+        return member.nickname || '';
     } catch (error) {
-        return entry.name || '';
+        return '';
     }
 }
 
