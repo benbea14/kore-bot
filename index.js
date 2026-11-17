@@ -369,29 +369,6 @@ client.on(Events.GuildMemberAdd, async member => {
     embeds: [welcomeEmbed],
     files: [new AttachmentBuilder(welcomeImage)]
   });
-
-      // ===== PRIVATE MESSAGE =====
-  const dmEmbed = new EmbedBuilder()
-    .setColor(0x9B59B6)
-    .setTitle(`💜 Welcome to ${member.guild.name}!`)
-    .setDescription(
-      `Hi ${member}! 🫶\n
-      We’re really happy you joined our BTS community!\n
-      To start chatting:\n
-      1️⃣ Read the rules \n
-      2️⃣ Click the **I agree** button \n
-      3️⃣ Get the **ARMY role**! \n
-      Then you can access all chats and join voice channels!\n Borahae 💜`)
-    .setImage('attachment://welcome.png')
-    .setFooter({ text: 'Have fun and enjoy the server!' });
-
-  try {
-    await member.send({
-      embeds: [dmEmbed],
-      files: [new AttachmentBuilder(welcomeImage)] });
-  } catch {
-    console.log(`Could not DM ${member.user.tag}`);
-  }
 });
 
 client.on(Events.GuildMemberRemove, member => {
@@ -501,10 +478,6 @@ client.on(Events.MessageCreate, async message => {
       await updateNickname(message.member, result.level);
     }
 
-    // Optional DM
-    try {
-      await message.author.send({ embeds: [embed] });
-    } catch {}
   }
 
   // ===== COUNTING GAME =====
